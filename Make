@@ -1,0 +1,31 @@
+
+MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
+# RDL file to compile
+RDL := $(MAKEFILE_DIR)/../svr_mbx/p1/rdl/mbx_regmap_p1.rdl
+
+# clang-format command
+CLANG_FORMAT := clang-format-18
+
+# list of file that will be clang formatted
+CLANG_FORMAT_DIR := \
+	$(MAKEFILE_DIR)/drivers/include \
+	$(MAKEFILE_DIR)/drivers/src \
+	$(MAKEFILE_DIR)/lib \
+	$(MAKEFILE_DIR)/test/sv \
+
+.PHONY: gen_cheader clang_format release
+
+gen_cheader:
+	peakrdl svr-c-header \
+	$(RDL) \
+	-o $(MAKEFILE_DIR)/bsp/mdk/soc/svr_soc.h \
+	&& gcc \
+	-std=c11 \
+	-Wall -Wextra -Werror \
+	-x c -fsyntax-only \
+	$(MAKEFILE_DIR)/bsp/mdk/soc/svr_soc.h
+
+clang_format:
+	find $(CLANG_FORMAT_DIR) -type f \( -name '*.c' -o -name '*.h' \) -print0 \
+		| xargs -0 $(CLANG_FORMAT) --style=file -i
