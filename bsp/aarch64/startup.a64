@@ -13,8 +13,6 @@ _el3_init_vtable:
   // Base Address Register (VBAR)
   msr VBAR_EL3, X1
 
-  // 
-
 
 // When an excption occurs, the processor execute handler codes
 // the processor will look into the vector table and will execute
