@@ -24,8 +24,9 @@ void __attribute__((weak)) el3_sp0_serror_handler(void)
 
 void __attribute__((weak)) el3_spx_sync_handler(void)
 {
-	while (1)
-		;
+#ifdef DEBUG
+	while (1);
+#endif
 }
 
 void __attribute__((weak)) el3_spx_irq_handler(void)

@@ -231,8 +231,6 @@ _exc_vector_table:
   b _sp0_fiq_handler
   .balign 0x80
   b _sp0_serror_handler
-  .balign 0x80
-  b _sp0_sync_handler
   // functions prefix with sp0 are functions that will be
   // executed if exception is taken with SPn (SP_ELn Handler
   // mode) used - (PSTATE.SP == 0)
@@ -270,17 +268,62 @@ _exc_vector_table:
 // Below are all exception routines
 // **************************************************************************
 _sp0_sync_handler:
+  // when entering an exception handler, the CPU state PSTATE register
+  // is stored in SPSR (Saved Processor State Register).
+  //
+  // but we have to manually save the general-purpose registers in stack
+  saveregister
+
+  // c function call
+  bl el3_sp0_sync_handler
+
+  // manually restore the general-purpose registers from stack
+  restoreregister
+  // Ending exception handling and returning to the previous Exception
+  // level is performed by executing the ERET instruction.
+  //
+  // This causes the SPSR_ELn to be copied into PSTATE.
+  //
+  // This also restores the ALU flags, execution state, Exception level,
+  // and the processor branches. From here, you continue execution from
+  // the address in ELR_ELn.
+  eret
 _sp0_irq_handler:
+  saveregister
+  bl el3_sp0_irq_handler
+  restoreregister
+  eret
 _sp0_fiq_handler:
+  saveregister
+  bl el3_sp0_fiq_handler
+  restoreregister
+  eret
 _sp0_serror_handler:
-_sp0_sync_handler:
-  b .
+  saveregister
+  bl el3_sp0_serror_handler
+  restoreregister
+  eret
 
 _spx_sync_handler:
+  saveregister
+  bl el3_spx_sync_handler
+  restoreregister
+  eret
 _spx_irq_handler:
+  saveregister
+  bl el3_spx_irq_handler
+  restoreregister
+  eret
 _spx_fiq_handler:
+  saveregister
+  bl el3_spx_fiq_handler
+  restoreregister
+  eret
 _spx_serror_handler:
-  b .
+  saveregister
+  bl el3_sp0_serror_handler
+  restoreregister
+  eret
 
 _low_el_sync_handler:
 _low_el_irq_handler:

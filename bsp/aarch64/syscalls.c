@@ -21,7 +21,6 @@
  */
 #include <sys/stat.h>
 
-
 /**
  * @brief Write to a file.
  *
@@ -30,7 +29,7 @@
  * example to a serial port for debugging, you should make your minimal
  * write capable of doing this.
  *
- * The following minimal implementation is an incomplete example; 
+ * The following minimal implementation is an incomplete example;
  * it relies on a outbyte subroutine (not shown; typically, you must
  * write this in assembler from examples provided by your hardware
  * manufacturer) to actually perform the output.
@@ -39,11 +38,11 @@
  */
 int __attribute__((weak)) _write(int file, char *ptr, int len)
 {
-  char out;
+	char out;
 	for (int i = 0; i < len; i++) {
-    out = *(ptr++);
+		out = *(ptr++);
 	}
-  return len;
+	return len;
 }
 
 /**
@@ -94,7 +93,8 @@ int __attribute__((weak)) _read(int file, char *ptr, int len)
  */
 void __attribute__((weak)) _exit(int status)
 {
-	while (1);
+	while (1)
+		;
 }
 
 /**
@@ -103,7 +103,7 @@ void __attribute__((weak)) _exit(int status)
  */
 int _getpid(void)
 {
-  return 1;
+	return 1;
 }
 
 /**
@@ -111,7 +111,7 @@ int _getpid(void)
  */
 int _kill(int pid, int sig)
 {
-  return -1;
+	return -1;
 }
 
 /**
@@ -128,19 +128,20 @@ int _kill(int pid, int sig)
 void *_sbrk(int incr)
 {
 	extern char __heap_start; // Defined in your linker script
-  extern char stack_top;
-  static char *stack_ptr = &stack_top;
-  static char *heap_end = &__heap_start;
-  char *prev_heap_end;
+	extern char stack_top;
+	static char *stack_ptr = &stack_top;
+	static char *heap_end = &__heap_start;
+	char *prev_heap_end;
 
-  prev_heap_end = heap_end;
-  if ((heap_end + incr) > stack_ptr) {
-    _write(1, "Heap and stack collision\n", 25);
-    while(1);
-    _exit(-1);
-  }
+	prev_heap_end = heap_end;
+	if ((heap_end + incr) > stack_ptr) {
+		_write(1, "Heap and stack collision\n", 25);
+		while (1)
+			;
+		_exit(-1);
+	}
 
-  heap_end += incr;
+	heap_end += incr;
 
-  return (void *) prev_heap_end;
+	return (void *)prev_heap_end;
 }

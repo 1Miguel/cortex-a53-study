@@ -44,7 +44,6 @@ SECTIONS
   .rodata :{
     .__rodata_start__ = .;
     *(.rodata*)
-    *(.debug*)
     .__rodata_end__ = .;
   } > FLASH
 

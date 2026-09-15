@@ -90,7 +90,7 @@ add_link_options(
   # options must be prefix with `-Wld,` i.e -Wl,<option>, which tells gcc that
   # these options must be propagated to ld.
   -Wl,-Map firmware.map
-
+  -g
 )
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

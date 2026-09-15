@@ -34,7 +34,8 @@ The above image is called an address map. An address map is the arrangement of m
 
 ## Programs view of memory
 > [!NOTE] We are discussing this in BareMetal PoV.
-A program that CPU execute has a logical view of memory. It organize the memory in
+
+A program that CPU execute has a logical view of memory. It views the memory in **sections**.
 
 ```text
   +---------+ ---+
@@ -54,6 +55,12 @@ A program that CPU execute has a logical view of memory. It organize the memory 
   +---------+ ---+
 ```
 
+* **.text**: Contains the executable compiled code. Read-only.
+* **.rodata**: Read-only data such as **strings**, **const** vars, jump tables etc.
+* **.data**: **Initialized** global C vars (int var = 0;)
+* **.bss**: **Uninitialized** global C vars i.e (int var;)
+* **.debug**: A **debugging symbol table** with entries for local variables and typedefs defined in the program, global variables defined and referenced in the program, and the original C source file. It is only present if the compiler driver is invoked with the **-g** option.
+* **.line**: A *mapping between line numbers* in the original C source program and machine code instructions in the .text section. It is only present if the compiler driver is invoked with the **-g** option.
 
 > [!NOTE] Reference
 > Computer Systems: A Programmer's Perspective 2nd ed.
@@ -70,7 +77,7 @@ If you try to include libc, you'll find the build will failed not until you incl
 } > FLASH
 ```
 
-If you look into libc source code (newlib/libc/misc/init.c), you will the function below:
+If you look into **libc** source code (newlib/libc/misc/init.c), you will the function below:
 
 ``` C
 void __libc_init_array (void)

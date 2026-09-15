@@ -23,12 +23,22 @@ set_source_files_properties(
         COMPILE_OPTIONS "-x;assembler"
 )
 
-# cic
 add_executable(firmware
-    src/_main.c
+    src/main.c
     ${BSP_DIR}/el3_exceptions.c
     ${BSP_DIR}/startup.asm
     ${BSP_DIR}/syscalls.c
+)
+
+target_include_directories(firmware
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers
+    ${CMAKE_CURRENT_SOURCE_DIR}/bsp/aarch64
+)
+
+target_sources(firmware
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/uart.c
 )
 
 set_target_properties(firmware PROPERTIES
