@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 /**
  * Refer to PrimeCell UART (PL011) r1p5 Technical Reference Manual
@@ -16,19 +17,23 @@ volatile unsigned int *const UART0CR = (unsigned int *)(0x09000000 + 0x30);
 
 #define UART_CLR_H_WLEN_8_BITS (0x03)
 
-void print_uart0(const char *s)
+char *data = "hello world!";
+
+int _write(int file, char *ptr, int len)
 {
-	while (*s != '\0') {                   /* Loop until end of string */
-		*UART0DR = (unsigned int)(*s); /* Transmit char */
-		s++;                           /* Next char */
+  (void)(file); // unused
+  int i;
+	for (i = 0; i < len; i++) {
+		*UART0DR = (unsigned int)(*ptr++);
 	}
-	while (1)
-		;
+  return i;
 }
 
-void _main()
+int main()
 {
 	*UART0LCR_H |= (UART_CLR_H_WLEN_8_BITS << UART_CLR_H_WLEN_BIT_POS) | UART_CLR_H_FEN_BIT_MSK;
 	*UART0CR |= (UART_CR_UARTEN_BIT_MSK | UART_CR_TXE_BIT_MSK | UART_CR_RXE_BIT_MSK);
-	print_uart0("Hello world!\n");
+	printf("hi! here's a message: %s\n", data);
+	while (1);
+	return 0;
 }

@@ -17,7 +17,7 @@ Some ARM terminologies you have to know.
 In general, the bootflow of aarch64 is:
 1. Initialize exceptions
   * Setting up the Vector Table
-  * Async exception routing and masking configuration
+  * Async exception (irq, fiq etc.) routing and masking configuration
 
 ## Setting up the Vector Table
 

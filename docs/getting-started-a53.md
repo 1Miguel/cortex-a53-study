@@ -11,7 +11,7 @@
 ```
 3. type start in the monitor to begin the execution
 ```bash
-(ARM Cortex-A53) start
+ARM Cortex-A53) start
 ```
 
 

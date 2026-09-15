@@ -1,7 +1,7 @@
 :name: Cortex-A53
 :description: This script runs a minimal code.
 
-$bin?=@_main.elf
+$bin?=@build/firmware.elf
 $name?="ARM Cortex-A53"
 
 using sysbus

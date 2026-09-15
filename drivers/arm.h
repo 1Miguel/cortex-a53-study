@@ -5,7 +5,7 @@
 #ifndef __AARCH64_H
 #define __AARCH64_H
 
-#define __EA_BIT (1U << 3)
+#define __EA_BIT  (1U << 3)
 #define __IRQ_BIT (1U << 1)
 #define __FIQ_BIT (1U << 2)
 
