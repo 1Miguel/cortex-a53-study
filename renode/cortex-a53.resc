@@ -1,13 +1,13 @@
 :name: Cortex-A53
 :description: This script runs a minimal code.
 
-$bin?=@_main.elf
+$bin?=@build/firmware.elf
 $name?="ARM Cortex-A53"
 
 using sysbus
 mach create $name
 
-machine LoadPlatformDescription @platforms/cpus/cortex-a53-gicv3.repl
+machine LoadPlatformDescription @renode/cortex-a53-gicv3.repl
 
 showAnalyzer uart0
 
