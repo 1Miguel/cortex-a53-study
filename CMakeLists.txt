@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 
 project(cortex_a53_study LANGUAGES C ASM)
 
-set(BSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bsp/aarch64")
-
 # Why?
 #
 # This indicates that startup.asm is an assembly language
@@ -17,7 +15,7 @@ set(BSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bsp/aarch64")
 # compiler to use assembler to process the target source
 # file.
 set_source_files_properties(
-    "${BSP_DIR}/startup.asm"
+    bsp/aarch64/startup.asm
     PROPERTIES
         LANGUAGE ASM
         COMPILE_OPTIONS "-x;assembler"
@@ -25,20 +23,17 @@ set_source_files_properties(
 
 add_executable(firmware
     src/main.c
-    ${BSP_DIR}/el3_exceptions.c
-    ${BSP_DIR}/startup.asm
-    ${BSP_DIR}/syscalls.c
+    bsp/aarch64/el3_exceptions.c
+    bsp/aarch64/startup.asm
+    bsp/common/syscalls.c
+    drivers/uart.c
 )
 
 target_include_directories(firmware
   PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/drivers
-    ${CMAKE_CURRENT_SOURCE_DIR}/bsp/aarch64
-)
-
-target_sources(firmware
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/uart.c
+    drivers
+    bsp/aarch64
+    bsp/common
 )
 
 set_target_properties(firmware PROPERTIES

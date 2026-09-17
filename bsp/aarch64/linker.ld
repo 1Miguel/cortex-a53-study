@@ -8,7 +8,7 @@
  */
 
 /* Tells the linker that this is the program entry point */
-ENTRY(_Reset)
+ENTRY(_reset)
 
 MEMORY {
   FLASH (rx)   : ORIGIN = 0x00000000, LENGTH = 0x08000000
@@ -108,10 +108,26 @@ SECTIONS
   } > FLASH
 
   . = ALIGN(__bss_end__, 8);
-	__heap_start = . + 0x8000;
+  .heap : {
+	  __heap_start = .;
+    . += 0x1000;
+    . = ALIGN(8);
+	  __heap_end = .;
+  }
 
-  . = ALIGN(8);
-	stack_top = ORIGIN(RAM) + LENGTH(RAM);
+  . = ALIGN(16);
+  .stack_el3 : {
+    . += 16K;
+    . = ALIGN(16);
+    __stack_top_el3 = .;
+  } > RAM
+
+  . = ALIGN(16);
+  .stack_el1 : {
+    . += 16K;
+    . = ALIGN(16);
+    __stack_top_el1 = .;
+  } > RAM
 
   /**
   * start of the data section loadable memory

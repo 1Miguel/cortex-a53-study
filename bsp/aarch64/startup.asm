@@ -1,5 +1,5 @@
 .section .text.startup
-.global _Reset
+.global _reset
 
 /*
  * @brief When saving register, we save is in stack, the `stp` (store pair)
@@ -53,7 +53,7 @@
 .endm
 
 // **************************************************************************
-_Reset:
+_reset:
   // initialise all registers
   //
   // ARM processors use some non-reset flip-flops. This can cause 
@@ -124,27 +124,53 @@ _init_cpu0:
   // in the linker script, the value of the symbol is treated as address
   // think of it as `stack_top` is a var but the address of the var contains
   // the value you assigned to the symbol `stack_top` in linker script.
-  ldr x30, =stack_top
+  ldr x0, =__stack_top_el3
 
   //  Now the x30 holds the address value defined by linker symbol
   //  stack_top. set the value of the stack pointer to x30
   //
   //  TODO: each cpu must have its own stack pointer starting
   //  address, for now we only use cpu0
-  mov sp, x30
-  
-  // initialise the vector table
-  b _init_vtable
+  mov sp, x0
 
 // **************************************************************************
-_init_vtable:
+_el3_init:
   // load el3_vtable mem address to register x1
-  ldr x1, = _exc_vector_table
+  ldr x1, =_exc_vector_table
+
   // assign x1 (address of el3_vtable) to EL3 Vector Table
   // Base Address Register (VBAR)
-  msr VBAR_EL3, X1
+  msr VBAR_EL3, x1
 
-  // b _bss_clear
+	mrs x0, scr_el3
+  // 64-bit mode
+	orr x0, x0, #(0x01 << 10)
+  // non secure state
+	orr x0, x0, #(0x01 << 0)
+  // we will disable SCR.HCE bit which disable hypervisor (EL2)
+  and x0, x0, #(~(0x01 << 7))
+  // write x0 to scr
+	msr scr_el3, x0
+
+  // we will now set the spsr to EL1 so when
+  // eret is invoked, the PSTATE will be restored to SPSR
+	mrs x0, spsr_el3
+	orr x0, x0, #0b0100
+	msr spsr_el3, x0
+
+  // at this point we will go to el1
+	msr sctlr_el1, xzr
+
+  // set to el1_entry
+	adr x0, _el1_entry
+	msr elr_el3, x0
+	eret
+
+_el1_entry:
+  ldr x0, =__stack_top_el1
+  mov sp, x0
+  ldr x1, =_exc_vector_table
+  msr VBAR_EL1, X1
 
 // **************************************************************************
 _data_load:
@@ -188,6 +214,9 @@ _bss_loop:
   b _bss_loop
 
 _bss_end:
+  // call the libc initialization routines
+  //bl __libc_init_array
+  // jump to main
   bl main
   b .
 
@@ -274,11 +303,11 @@ _sp0_sync_handler:
   // but we have to manually save the general-purpose registers in stack
   saveregister
 
-  // c function call
-  bl el3_sp0_sync_handler
+  bl el_sp0_sync_handler
 
   // manually restore the general-purpose registers from stack
   restoreregister
+
   // Ending exception handling and returning to the previous Exception
   // level is performed by executing the ERET instruction.
   //
@@ -290,38 +319,39 @@ _sp0_sync_handler:
   eret
 _sp0_irq_handler:
   saveregister
-  bl el3_sp0_irq_handler
+  bl el_sp0_irq_handler
   restoreregister
   eret
 _sp0_fiq_handler:
   saveregister
-  bl el3_sp0_fiq_handler
+  bl el_sp0_fiq_handler
   restoreregister
   eret
 _sp0_serror_handler:
   saveregister
-  bl el3_sp0_serror_handler
+  bl el_sp0_serror_handler
   restoreregister
   eret
 
 _spx_sync_handler:
   saveregister
-  bl el3_spx_sync_handler
+  mrs x12, currentEL
+  bl el_spx_sync_handler
   restoreregister
   eret
 _spx_irq_handler:
   saveregister
-  bl el3_spx_irq_handler
+  bl el_spx_irq_handler
   restoreregister
   eret
 _spx_fiq_handler:
   saveregister
-  bl el3_spx_fiq_handler
+  bl el_spx_fiq_handler
   restoreregister
   eret
 _spx_serror_handler:
   saveregister
-  bl el3_sp0_serror_handler
+  bl el_sp0_serror_handler
   restoreregister
   eret
 
@@ -329,6 +359,7 @@ _low_el_sync_handler:
 _low_el_irq_handler:
 _low_el_fiq_handler:
 _low_el_serror_handler:
+  mrs x0, currentEL
   b .
 
 _a32_sync_handler:

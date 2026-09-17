@@ -128,16 +128,13 @@ int _kill(int pid, int sig)
 void *_sbrk(int incr)
 {
 	extern char __heap_start; // Defined in your linker script
-	extern char stack_top;
-	static char *stack_ptr = &stack_top;
+	extern char __heap_end; // Defined in your linker script
 	static char *heap_end = &__heap_start;
 	char *prev_heap_end;
 
 	prev_heap_end = heap_end;
-	if ((heap_end + incr) > stack_ptr) {
+	if ((heap_end + incr) > &__heap_end) {
 		_write(1, "Heap and stack collision\n", 25);
-		while (1)
-			;
 		_exit(-1);
 	}
 

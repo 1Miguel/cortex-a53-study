@@ -18,6 +18,7 @@ end
 define machine_reset
     monitor pause
     monitor runMacro $reset
+    monitor start
 end
 
 define infoall
@@ -30,5 +31,9 @@ delete
 
 machine_reset
 
-break _Reset
-break main
+b _reset
+b _el3_init
+b _sp0_sync_handler
+b _spx_sync_handler
+b el_spx_sync_handler
+b main
