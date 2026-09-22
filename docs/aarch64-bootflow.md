@@ -35,7 +35,7 @@ _reset:
   // get the cpu id via MIPDR_EL1, Multiprocessor Affinity Registers
   // the MPIDR provides processor identification
   // See AArch64 Reference Manual, D13.2.99 MIPDR_EL1
-  mrs x1, MPIDR_EL1
+  mrs x1, mpidr_el1
   // the lsb bytes contains the cpu id
   and x1, x1, 0xFF
   // initialise stack ptr depending on the processor

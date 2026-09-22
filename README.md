@@ -1,70 +1,55 @@
 # A53 Renode
 A study of cortex-A53 aarch64 using [Renode](https://renode.io/).
 
-# Terminologies
-Some ARM terminologies you have to know.
-|Terms|Meaning|
-|:-|-|
-| Execution State | Mode of execution, architecture mode (AArch64/AArch32)|
-| EL | Exception Level |
-| PE | Processing Element (CPU) |
-| IRQ | Interrupt Request, the standard normal-prio Hardware Interrupt. |
-| FIQ | Fast Interrupt Request, high prio low latency Hardware Interupt. |
-| Thread | Thread mode, runs app tasks. |
-| Handler | Handler mode, runs system exceptions or interrupts. |
-# AArch64 Boot Flow
-
-In general, the bootflow of aarch64 is:
-1. Initialize exceptions
-  * Setting up the Vector Table
-  * Async exception (irq, fiq etc.) routing and masking configuration
-
-## Setting up the Vector Table
-
-When the CPU (Processing Element or PE) receives an *interrupt*, it interrupts the soft/firmwares *flow of execution*. In ARM terminology, that is an *exception*.
-
+# Running QEMU
+```bash
+qemu-system-aarch64 \
+  -machine virt \
+  -cpu cortex-a53 \
+  -kernel ./build/firmware.elf \
+  -S \
+  -s
 ```
 
-+--------------+    +------------+    +------+
-| Peripheral 1 | -> | Interrupt  | -> | CPU  |
-+--------------+    | Controller |    +------+
-                    +------------+                  
-                         ^
-+--------------+         |
-| Peripheral n | --------+ 
-+--------------+
+# Getting Started Renode w/ A53
+## Run using the example
+1. Run `renode` to open the `renode` monitor
+```bash
+renode &
 ```
 
-Exceptions to the CPU will cause the CPU execute routines.
+2. Run and load the built-in script
+```bash
+include @scripts/single-node/cortex-a53.resc
+```
 
-Each exception level has its own dedicated vector table namely **VBAR_EL{n}** where **n** is the exception level (1, 2, 3). The vector table in AArch64 contains 16 entries and must be placed at a 2KB-aligned address.
+3. type start in the monitor to begin the execution
+```bash
+start
+```
 
-# Processing State
+## Running with no-gui
+1. Run renode with --disable-gui option
+```bash
+renode --disable-gui
+```
 
->[!Reference]
-> ARM DDI 0487G.a The AArch64 System Level Programmers’ Model D1.6 Registers for instruction processing and exception handling
+2. This will create a telnet session which will allow you to connect to it in a different terminal, this is useful in automation
+```bash
+telnet localhost 1234
+```
 
-In AArch64, a dedicated stack pointer is implemented for each implemented Exception Level (EL).
-  * SP_EL0 for EL0
-  * SP_EL1 for EL1
-  * SP_EL2 for EL2 (if implemented)
-  * SP_EL3 for EL3 (if implemented)
+3. Then, include the machine file and start gdb server
+```bash
+include @scripts/single-node/cortex-a53.resc
+machine StartGdbServer 3333
+```
 
-## How Stack Pointer is selected?
-When executing at EL0 the processor uses the SP_EL0. When executing at higher Exception level, the processor can be configured to use SP_EL0 or the SP for that exception level. Example is the software executing at EL1, can choose to use SP_EL0 or SP_EL1 by setting the PSTATE.SP.
+4. Once GDB server is started, all machine/monitor commands can be sent over gdb, at this point you can start the uart console session via
+```bash
+uart_connect sysbus.uart0
+```
 
-The selected stack pointer can be indicated by a suffix to the exception level:
-  * **t** indicates the use of SP_EL0
-  * **h** indicates the use of SP_EL*x*
-
-Example, Exception Level 3 (EL3) has stack pointer selection:
-  * SP_EL3**t** (SP_EL0 or SP0) when PSTATE.SP==0
-  * SP_EL3**h** (SP_ELx or SPx) when PSTATE.SP==1
-
-## Whats with SP_EL0?
-EL0 is the lowest exception level. Usually, you would want software apps to run at this level since it has the least privileges. This is what we call **Thread** mode. When an exception occurs, the processor will handle the exception and execute exception routine, the processor will go into **Handler** mode. The software that executes at higher exception level can choose to use **Handler** Stack Pointer (SP_EL0) or the Stack pointer dedicated to that exception level (SP_ELx). The SP_ELx is also known as **SPx**.
-
-But here's the thing. Since the app uses SP_EL0, normally you woudn't trust that. You wouldn't want to use that stack pointer at higher privilege, since EL0 might be running a malicious software.
 
 # References
 - [Arm® Architecture Reference Manual Armv8, for Armv8-A architecture profile](https://developer.arm.com/docs/ddi0487/ea/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile)

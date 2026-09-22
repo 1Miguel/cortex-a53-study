@@ -1,0 +1,18 @@
+:name: Cortex-A53
+:description: This script runs a minimal code.
+
+$bin?=@build_aarch32/firmware.elf
+$name?="ARM Cortex-A9"
+
+using sysbus
+mach create $name
+
+machine LoadPlatformDescription @renode/cortex-a9.repl
+
+showAnalyzer uart0
+
+macro reset
+"""
+    sysbus LoadELF $bin
+"""
+runMacro $reset

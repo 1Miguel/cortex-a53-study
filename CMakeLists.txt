@@ -1,39 +1,38 @@
 cmake_minimum_required(VERSION 3.20)
 
+if (NOT DEFINED TARGET_ARCH)
+  set(TARGET_ARCH aarch64)
+endif()
+
+if (TARGET_ARCH STREQUAL "aarch64")
+  set(CMAKE_TOOLCHAIN_FILE ./cmake/aarch64-none-elf.cmake CACHE STRING "")
+elseif(TARGET_ARCH STREQUAL "aarch32")
+  set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/bsp/aarch32/linker.ld")
+  set(CMAKE_TOOLCHAIN_FILE ./cmake/arm-none-eabi.cmake CACHE STRING "")
+else()
+  message(FATAL "${TARGET_ARCH} Target Architecture is unsupported")
+endif()
+
 project(cortex_a53_study LANGUAGES C ASM)
 
-# Why?
-#
-# This indicates that startup.asm is an assembly language
-# and to compile this it has to pass compiler flags
-# "-x assembler". This will, at build time, invoke
-#
-# "{prefix}-gcc -x assembler <file>
-#
-# to which "{prefix}-gcc -x assembler" is similar to
-# invoking "{prefix}-as <file>", basically telling the
-# compiler to use assembler to process the target source
-# file.
-set_source_files_properties(
-    bsp/aarch64/startup.asm
-    PROPERTIES
-        LANGUAGE ASM
-        COMPILE_OPTIONS "-x;assembler"
-)
+message(STATUS "Target Architecture: ${TARGET_ARCH}")
 
 add_executable(firmware
     src/main.c
-    bsp/aarch64/el3_exceptions.c
-    bsp/aarch64/startup.asm
     bsp/common/syscalls.c
     drivers/uart.c
+    $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:bsp/aarch64/el3_exceptions.c>
+    $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:bsp/aarch64/startup.s>
+
+    $<$<STREQUAL:"${TARGET_ARCH}","aarch32">:bsp/aarch32/exceptions.c>
+    $<$<STREQUAL:"${TARGET_ARCH}","aarch32">:bsp/aarch32/startup.s>
 )
 
 target_include_directories(firmware
   PRIVATE
     drivers
-    bsp/aarch64
     bsp/common
+    $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:${CMAKE_CURRENT_LIST_DIR}/bsp/aarch64>
 )
 
 set_target_properties(firmware PROPERTIES
@@ -42,4 +41,5 @@ set_target_properties(firmware PROPERTIES
 )
 
 target_create_bin(firmware)
+
 target_objdump(firmware)

@@ -35,11 +35,8 @@ int main()
 	*UART0LCR_H |= (UART_CLR_H_WLEN_8_BITS << UART_CLR_H_WLEN_BIT_POS) | UART_CLR_H_FEN_BIT_MSK;
 	*UART0CR |= (UART_CR_UARTEN_BIT_MSK | UART_CR_TXE_BIT_MSK | UART_CR_RXE_BIT_MSK);
 	printf("hi! here's a message: %s\n", data);
-
-	printf("attempt smc call\n");
-  smc(0);
-
 	printf("end\n");
+
 	while (1);
 
 	return 0;
