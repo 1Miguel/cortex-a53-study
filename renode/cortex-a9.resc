@@ -7,7 +7,7 @@ $name?="ARM Cortex-A9"
 using sysbus
 mach create $name
 
-machine LoadPlatformDescription @renode/cortex-a9.repl
+machine LoadPlatformDescription @./renode/cortex-a9-custom.repl
 
 showAnalyzer uart0
 

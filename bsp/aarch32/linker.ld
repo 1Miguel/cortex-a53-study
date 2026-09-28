@@ -9,7 +9,13 @@
 
 ENTRY(_reset)
 
-STACK_SIZE_IRQ = 16K;
+STACK_SIZE_IRQ = 0x4000;
+STACK_SIZE_FIQ = 0x4000;
+STACK_SIZE_ABT = 0x4000;
+STACK_SIZE_SVC = 0x4000;
+STACK_SIZE_MON = 0x4000;
+STACK_SIZE_UND = 0x4000;
+STACK_SIZE_SYS = 0x4000;
 
 MEMORY {
   FLASH (rx)   : ORIGIN = 0x80000000, LENGTH = 0x04000000
@@ -103,9 +109,36 @@ SECTIONS
 
   . = ALIGN(16);
   .cpu0.stack : {
+
+    __cpu0_stack_top = .;
     . += STACK_SIZE_IRQ;
     . = ALIGN(8);
-    __cpu0_stack_top = .;
+    __cpu0_stack_top_irq = .;
+
+    . += STACK_SIZE_FIQ;
+    . = ALIGN(8);
+    __cpu0_stack_top_fiq = .;
+
+    . += STACK_SIZE_ABT;
+    . = ALIGN(8);
+    __cpu0_stack_top_abt = .;
+
+    . += STACK_SIZE_SVC;
+    . = ALIGN(8);
+    __cpu0_stack_top_svc = .;
+
+    . += STACK_SIZE_MON;
+    . = ALIGN(8);
+    __cpu0_stack_top_mon = .;
+
+    . += STACK_SIZE_UND;
+    . = ALIGN(8);
+    __cpu0_stack_top_und = .;
+
+    . += STACK_SIZE_SYS;
+    . = ALIGN(8);
+    __cpu0_stack_top_sys = .;
+
   } > RAM
 
   /**

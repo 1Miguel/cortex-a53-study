@@ -8,7 +8,7 @@ set print array on
 set disassemble-next-line on
 
 file ./build_aarch32/firmware.elf
-target remote :3333
+#target remote :3334
 
 define bmain
     break main
@@ -28,6 +28,6 @@ end
 
 delete
 
-machine_reset
+#machine_reset
 b _reset
 b main

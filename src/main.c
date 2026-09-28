@@ -1,12 +1,14 @@
+#include <stdint.h>
 #include <stdio.h>
-#include "arm64.h"
 
 /**
  * Refer to PrimeCell UART (PL011) r1p5 Technical Reference Manual
  */
-volatile unsigned int *const UART0DR = (unsigned int *)0x09000000;
-volatile unsigned int *const UART0LCR_H = (unsigned int *)(0x09000000 + 0x2C);
-volatile unsigned int *const UART0CR = (unsigned int *)(0x09000000 + 0x30);
+#define UART0 (0x09000000)
+
+volatile uint32_t *const UART0DR = (uint32_t *)UART0;
+volatile uint32_t *const UART0LCR_H = (uint32_t *)(UART0 + 0x2C);
+volatile uint32_t *const UART0CR = (uint32_t *)(UART0 + 0x30);
 
 #define UART_CR_UARTEN_BIT_MSK (1U << 0)
 #define UART_CR_TXE_BIT_MSK    (1U << 9)
