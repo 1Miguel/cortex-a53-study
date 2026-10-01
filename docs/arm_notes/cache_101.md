@@ -16,11 +16,22 @@ The `set` bits indicates the index of the cache line the data will be stored to.
 
 ![direct_cache_compare](../images/direct_map_cache_compare.drawio.svg)
 
-The problem with direct map cache is two or more `tag` could be associated into a single cache line. This is called *cache conflict*.
+The problem with direct map cache is two or more `tag` could be associated into a single cache line. This is called *cache conflict*. Consider this code:
+```C
+int *a = 0x40;
+int *b = 0x80;
+int *c = 0xC0;
+int size = 10;
+
+while(size--)
+  *c = *a++ + *b++;
+```
+if `0x40`, `0x80`, `0xC0` maps to the same set, both read and write access will repeatedly cause a cache miss. Every access will cause cache to be replaced. This problem is called *cache thrashing*.
 
 # Cache Associativity
-In a *set associative cache*, each set `S` would contain `B/A` blocks where `A` is the degree of associativity. An `A=2` means a cache with `B=8` would contains `B/A = 8/2 = 4` number of *sets* `S`. Think of this as grouping the `cache` into `A` number of *blocks* `B`.
+In a *set associative cache*, each set `S` would contain `B/A` blocks where `A` is the degree of associativity. An `A=2` means a cache with `B=8` would contains `B/A = 8/2 = 4` number of *sets* `S`.
 
+![2_way_cache](../images/n_way_assoc_cache.svg)
 
 **ARM always uses *set associative cache***. The `CCSIDR`(Cache Size ID Registers) provide information to cache.
 
@@ -79,3 +90,37 @@ uint32_t ccsidr = mrc(15, 1, 0 ,0, 0);
 # Clean and Invalidation
   * `invalidation` refers to cache line **valid** bit to be set to `0`. If its valid, then invalidate!
   * `clean` refers to write contents of all cache lines with **dirty** bits set to main memory.
+
+# PIPT and VIPT
+
+> [!Note] ARM core main cache (L1) always use N-way set associative cache. 
+> ``` text 
+> Associative cache address format:
+>  +----------------+--------+---------+----------+
+>  |     Tag        |   Set  |   Word  |   Byte   |
+>  +----------------+--------+---------+----------+
+> 31              13 12     5 4       2 1         0
+> ```
+
+**Virtual Index Physical Tag**, means that *virtual address is used to determine the cache line index* but the *physical address is used for tag*. This resolves the issue of cache need for invalidation when MMU virtual to physical mapping changes. However this introduces new problem, since the associative cache uses bit [12:5] to determine the `set`, virtual address uses bit [12] for address translation (64KiB page size). This potentially creates a problem, two or more virtual address with different bit [13:12] could also point to the same physical address. This creates two or more cache entries that points to the same physical address, which means memory can already exist in the cache line with different virtual cache line index.
+```text
+                                  Virtual Address
+ +----------------+-----------------------------+
+ |      Index     |           offset            |
+ +----------------+-----------------------------+
+31       |      12 11          |                0
+         v                     |
+ +----------------+            |
+ |   Translation  |            |
+ +----------------+            |
+         |                     |
+         v                     v  Physical Address
+ +----------------+-----------------------------+
+ |      Index     |           offset            |
+ +----------------+-----------------------------+
+31              12 11                           0
+```
+The solution to this is to use [page colouring](https://developer.arm.com/community/arm-community-blogs/b/architectures-and-processors-blog/posts/page-colouring-on-armv6-and-a-bit-on-armv7) scheme. Page colouring uses `bits[13:12]` to indicate a colour. A page allocator, when mapping virtual address to a physical address, will impose restriction, to ensure that a physical address will only be mapped to a single colour. physical address will be use both as cache line index and cache tag. This ensures that there would be no duplicate physical address tag in cache.
+
+All ARM cortex uses `PIPT` scheme for data cache and `VIPT` for instruction cache since usually, restriction in size can be imposed in instructions, which prevents wrapping of `bits[13:12]` which prevents having two virtual address being mapped to the same physical address.
+

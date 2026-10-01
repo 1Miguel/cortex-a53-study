@@ -1,4 +1,4 @@
-# Memory
+# Memory Management Unit
 
 ARM AArch32 has two Memory Systems Architecture: VMSA and PMSA. **PMSA** or Protected Memory System Architecture is a memory protection architecture scheme that utilizes **MPU**, while **VMSA** or Virtual Memory System Architecture provides both memory protection and address virtualization via **MMU**. Think of **MMU** as an **MPU** but with added virtualization.
 
@@ -10,55 +10,21 @@ The Memory Model Feature Register 0 (ID_MMFR0 bits[3:0] VMSA/PMSA support) allow
 ## Memory Management Unit (MMU)
 The MMU provides both address virtualization and memory protection. It translates CPU memory access from virtual address to physical address which allows writing programs without knowing the underlying physical memory organization. In Baremetal application, MMU can be used to partition memory map and assign protection attributes such as permission and memory attributes such as regions being cache-able or executable.
 
-<Add image here>
-
 The ARM MMU uses 2 levels of translation. The 1st level of translation splits the entire AArch32 memory space (2^32 or **4GiB**) into **4096 sections**, each is **1MiB** (4GiB / 4096) in size. A **section** is a unit of translatable memory space.
 
 ### L1 Translation
 When CPU wants to access memory with a virtual address, the MMU will look into the L1 Translation Table to translate virtual to physical address. The L1 Translation table, aka 'page table' is an array of words(u32) with length of **4096**, with each entry holds either pointer to the base address of L2 Translation table or the *mapped physical address* and protection/memory attributes for translating and accessing a **1MiB** section.
 
-```text
-Page Table
+![l1_translation](../images/l1-address-translation-table.drawio.svg)
 
-  idx       words(u32)
-        +--------------+
- 0x0FFF |              |
-        +--------------+
- 0x0008 |              |
-        +--------------+
- 0x0007 |              |
-        +--------------+
- ....   |              |
-        +--------------+
- 0x0005 |              |
-        +--------------+
- 0x0004 |              |
-        +--------------+
- 0x0003 |              |
-        +--------------+
- 0x0002 |              |
-        +--------------+
- 0x0001 |              |
-        +--------------+
- 0x0000 |              |
-        +--------------+
-```
 > [!Note] Pages and Page Table
 > **Page**: Refers to the unit of translation i.e a 1MiB *virtual* page will be translated to the same *physical* page size.
 > **Page Table**: Is a table that is used to translate virtual to physical. Typically each element is word size and can be address via virtual address and each element contains the physical page address.
 
-## Write Cache Policy
-
-  * `write-through`: When data is written to cache, it is immediately written to memory. This keeps the cache and main memory sync but at the cost of increase in main memory traffic due to write transactions.
-  * `write-back`: Writes are only performed in cache. This could cause data in memory to be **stale**. When cache is written , a **dirty** bit in cache is set to `1` to indicate that data is written in cache but not yet in main memory.
-
-## Clean and Invalidation
-  * `invalidation` refers to cache line **valid** bit to be set to `0`. If its valid, then invalidate!
-  * `clean` refers to write contents of all cache lines with **dirty** bits set to main memory.
-
-CP15 instructions provides operations to clean or/and invalidate cache.
-
 ## L2 Translation
+
+L2 Translation provides coarse address translation at the expense of additional table.
+![l1_l2_translation](../images/address-translation-table.drawio.svg)
 
 ## PIPT and VIPT
 
@@ -93,7 +59,7 @@ The solution to this is to use [page colouring](https://developer.arm.com/commun
 
 All ARM cortex uses `PIPT` scheme for data cache and `VIPT` for instruction cache since usually, restriction in size can be imposed in instructions, which prevents wrapping of `bits[13:12]` which prevents having two virtual address being mapped to the same physical address.
 
-# Bootflow
+# Initialising MMU Bootflow
 On the high level part of the bootflow is to
   1. clear and/or invalidate all caches: *I-Cache*, *D-Cache*, *TLB*
   2. create a translation table
@@ -117,9 +83,9 @@ setup_cache:
 
   /* invalidate all caches and TLB */
   mov	r0, #0
-	mcr	p15, 0, r0, c7, c5, 0		// invalidate instruction cache
-	mcr	p15, 0, r0, c7, c5, 6		// Invalidate branch predictor array
-	mcr	p15, 0, r0, c8, c7, 0		// invalidate entire unified TLB
+  mcr	p15, 0, r0, c7, c5, 0		// invalidate instruction cache
+  mcr	p15, 0, r0, c7, c5, 6		// Invalidate branch predictor array
+  mcr	p15, 0, r0, c8, c7, 0		// invalidate entire unified TLB
   isb
   bl invalidate_dcache
 
@@ -214,4 +180,64 @@ for_each_set:
   cmp r4, r3              // if (i_way < num_way)
   ble for_each_way        //   goto for_each_way
 ```
+
+# Creating Translation Table
+As discuss earlier, there are 2 levels of translation table. Depending on the type of descriptor if L2 can be used, but by default, we can use only L1. So before we enable the MMU, we need to do a couple of things:
+1. Build 'L1' translation table.
+2. Set the `TTBR` Translation Table Base Register
+
+Given a memory layout of:
+
+![mem_layout](../images/mem_layout.drawio.svg)
+
+When building the translation table, it needs to be *16kIB aligned*, so we will reserve a section for the translation table in the linker script:
+```ld
+  .mmu_l1_tbl (ALIGN(16384)) : {
+    __mmu_l1_tbl_start = .;
+    *(.mmu_l1_tbl*)
+    __mmu_l1_tbl_end = .;
+  } > RAM
+```
+
+## Building the table and assigning memory attributes
+**L1** translation table translates in `1MiB` section, memory regions less then `1MiB` requires **L2** translation. The **L2** Translation supports either `64KiB` or `4KiB` page. So in our memory layout example above, **ROM (384KiB)** would require **L2** translation, and since 384KiB is multiple of 64KiB, we can use an **L2** translation page size `64KiB`.
+
+| Memory     | Address    | Size   | Type                                  | L2    | **S** | **TEX** | **AP** | **C** | **B** | XN  |
+| ---------- | ---------- | ------ | ------------------------------------- | ----- | :---: | :-----: | :----: | :---: | :---: | :-: |
+| ROM        | 0x00000000 | 384KiB | Executable, Strongly ordered, RO      | 64KiB |   0   |   000   |   01   |   1   |   0   |  0  |
+| RAM        | 0x00000000 | 128KiB | Normal, Write-Back Cached             | 64KiB |   1   |   000   |   11   |   1   |   1   |  1  |
+| XIP        | 0x00000000 | 1MiB   | Executable, Device, Write-Back Cached |       |   1   |   000   |   11   |   1   |   1   |  0  |
+| Peripheral | 0x00000000 | 1GiB   | Shareable Device                      |       |   1   |   000   |   11   |   0   |   1   |  1  |
+| DDR        | 0x00000000 | 1GiB   | Normal, Write-Back Cached             |       |   1   |   000   |   11   |   1   |   1   |  1  |
+
+Wherein
+* `S` Shareable bit, indicate if memory region is shareable across multiple cores, clusters, bus, peripherals, etc.
+* `AP` Access protection, either **RO**, **WO** or **RW**
+* `TEX`,`C`, `B` - Defines the type of memory. Memory could either be *Normal*, *Device* or *Strongly-Ordered*.
+* `XN` - Execute Never or no executable code should be in this memory region.
+
+> [!NOTE] Write Policies
+> *write-through* means data is written to a cache block is simultaneously written to main memory.
+> *write-back* means a dirty-bit(D) is associated with each cache block to indicate if memory is *stale*, only when cache block is evicted that memory is written back in main memory.
+> *write-allocate* or *allocate on write* means on *cache-miss*, fill the cache line from memory then update it, if *no write-allocate* just write data directly to memory without filling the cache line.
+> 
+> note that *write-through* and *write-back* describe what will happen at *cache-hit*. *write-allocate* describes what happen at *cache-miss*. So a *write-back* with *write-allocate* means on *cache-miss*, cache line will be filled with data from memory, then both the cache and memory will be updated simultaneously, while *write-through, write-allocate* will only write to cache line.
+
+(TODO)
+and part of our start up code is to build this table, we can easily do this via some directives:
+
+```asm
+.set PHY_ADDR, 0
+.set SECT, 0
+.section .mmu_l1_tbl, "a"
+mmu_l1_tbl:
+  .rept	0x0020			    /* 0xe4000000 - 0xe5ffffff (SRAM) */
+  .word	SECT + 0xc0e		/* S=b0 TEX=b000 AP=b11, Domain=b0, C=b1, B=b1 */
+  .set	SECT, SECT+0x100000
+  .endr
+```
+(END-TODO)
+
+> [!NOTE] nG Field
+> The `nG` field is a flag the indicates if a memory page is *non-global*. A *non-global* region means the memory page translation is process-specific and would be related to the current `ASID` *Address Space Identifier*.
 

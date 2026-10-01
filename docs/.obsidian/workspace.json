@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "arm_notes/exception_handling.md",
+                "file": "arm_notes/arm_mem_mgmt.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "exception_handling"
+              "title": "arm_mem_mgmt"
             }
           }
         ]
@@ -190,14 +190,19 @@
   },
   "active": "dda4e6e62ca0b249",
   "lastOpenFiles": [
+    "arm_notes/arm_mem_mgmt.md~",
+    "images/mem_layout.drawio.svg",
+    "arm_notes/exception_handling.md",
+    "arm_notes/cache_101.md",
+    "arm_notes/arm_mem_mgmt.md",
+    "images/l1-address-translation-table.drawio.svg",
+    "images/address-translation-table.drawio.svg",
+    "arm_notes/cache_101.md~",
+    "images/n_way_assoc_cache.svg",
     "arm_notes/exception_handling.md~",
     "arm_notes/ld_vs_mov.md",
-    "arm_notes/exception_handling.md",
     "arm_notes/ld_vs_mov.md~",
-    "arm_notes/cache_101.md",
-    "arm_notes/cache_101.md~",
     "arm_notes/aarch64-bootflow.md",
-    "arm_notes/arm_mem_mgmt.md",
     "arm_cortexa_series_armva_programmers_guideguide_den0013_0400_en.pdf"
   ]
 }
