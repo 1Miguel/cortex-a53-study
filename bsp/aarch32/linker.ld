@@ -141,6 +141,12 @@ SECTIONS
 
   } > RAM
 
+  .mmu_l1_tbl (ALIGN(16384)) : {
+    __mmu_l1_tbl_start = .;
+    . += 0x4000;
+    __mmu_l1_tbl_end = .;
+  } > RAM
+
   /**
   * start of the data section loadable memory
   */
