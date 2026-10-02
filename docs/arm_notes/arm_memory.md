@@ -1,5 +1,8 @@
 # ARM Cache
 ------
+
+![mem_model](../images/cache_model.drawio.svg)
+
 ## Cache Terms
 * `cache` memory that holds commonly or most recently used memory data.
 * `cache block` group of words that is a unit of storage, also known as `cache line`.
