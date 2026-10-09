@@ -60,7 +60,7 @@ _reset:
   // X-propagation issues in simulations. Register initialization helps
   // reduce the possibility of the issue
   //
-  // NOTE: This is note required in actual hardware/silicon
+  // NOTE: This is not required in actual hardware/silicon
   //
   // ... you might notice `xzr`, xzr is a special register
   // that is always zero (hardcode to 0).
@@ -115,7 +115,6 @@ _reset:
   // beq _init_cpu0
 
 _init_cpu0:
-
   // ... the ldr instruction below is a "pseudo instruction" it
   // tells to load the `stack_top` address we defined in the linker
   // script into regixter x30.
@@ -133,8 +132,6 @@ _init_cpu0:
   //  address, for now we only use cpu0
   mov sp, x0
 
-// **************************************************************************
-_el3_init:
   // load el3_vtable mem address to register x1
   ldr x1, =_exc_vector_table
 
@@ -142,35 +139,55 @@ _el3_init:
   // Base Address Register (VBAR)
   msr VBAR_EL3, x1
 
+// **************************************************************************
+_el3_init:
 	mrs x0, scr_el3
   // 64-bit mode
-	orr x0, x0, #(0x01 << 10)
+	orr x0, x0, #(1 << 10)
   // non secure state
-	orr x0, x0, #(0x01 << 0)
+	orr x0, x0, #(1 << 0)
   // we will disable SCR.HCE bit which disable hypervisor (EL2)
-  and x0, x0, #(~(0x01 << 7))
+  // and x0, x0, #(~(0x01 << 8))
   // write x0 to scr
 	msr scr_el3, x0
+  isb
 
-  // we will now set the spsr to EL1 so when
-  // eret is invoked, the PSTATE will be restored to SPSR
-	mrs x0, spsr_el3
-	orr x0, x0, #0b0100
-	msr spsr_el3, x0
+  // HCR controls the EL1 execution
+  mrs x0, hcr_el2
+  orr x0, x0, #(1 << 31)
+  msr hcr_el2, x0
+  isb
 
   // at this point we will go to el1
 	msr sctlr_el1, xzr
 
+  // we will now set the spsr to EL1 so when
+  // eret is invoked, the PSTATE will be restored to SPSR
+	mov x0, #0x5
+	msr spsr_el3, x0
+  isb
+
   // set to el1_entry
-	adr x0, _el1_entry
+	ldr x0, =_el1_entry
 	msr elr_el3, x0
+  isb
+
 	eret
 
+.balign 0x04
 _el1_entry:
   ldr x0, =__stack_top_el1
   mov sp, x0
-  ldr x1, =_exc_vector_table
-  msr VBAR_EL1, X1
+
+  ldr x1, =_el1_exc_vector_table
+  msr vbar_el1, X1
+  isb
+
+  // prevent fip/simd to be trap in exception
+  mrs x0, cpacr_el1
+  orr x0, x0, #(3 << 20)
+  msr cpacr_el1, x0
+  isb
 
 // **************************************************************************
 _data_load:
@@ -215,7 +232,7 @@ _bss_loop:
 
 _bss_end:
   // call the libc initialization routines
-  //bl __libc_init_array
+  // bl __libc_init_array
   // jump to main
   bl main
   b .
@@ -367,3 +384,39 @@ _a32_irq_handler:
 _a32_fiq_handler:
 _a32_serror_handler:
   b .
+
+
+.balign 0x800
+_el1_exc_vector_table:
+  b _sp0_sync_handler
+  .balign 0x80 // ensure 128-byte alignment
+  b _sp0_irq_handler
+  .balign 0x80
+  b _sp0_fiq_handler
+  .balign 0x80
+  b _sp0_serror_handler
+  .balign 0x80
+  b _spx_sync_handler
+  .balign 0x80
+  b _spx_irq_handler
+  .balign 0x80
+  b _spx_fiq_handler
+  .balign 0x80
+  b _spx_serror_handler
+  .balign 0x80
+  b _low_el_sync_handler
+  .balign 0x80
+  b _low_el_irq_handler
+  .balign 0x80
+  b _low_el_fiq_handler
+  .balign 0x80
+  b _low_el_serror_handler
+  .balign 0x80
+  b _a32_sync_handler
+  .balign 0x80
+  b _a32_irq_handler
+  .balign 0x80
+  b _a32_fiq_handler
+  .balign 0x80
+  b _a32_serror_handler
+

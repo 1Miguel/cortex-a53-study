@@ -130,7 +130,7 @@ _bss_loop:
   b _bss_loop
 _bss_end:
   // call the libc initialization routines
-  //bl __libc_init_array
+  bl __libc_init_array
   // jump to main
   bl main
   b .

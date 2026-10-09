@@ -3,7 +3,6 @@
 
 __attribute__((weak)) void irq_handler(void)
 {
-
 }
 
 #endif // __GIC_VECTORS__H

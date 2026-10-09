@@ -12,8 +12,13 @@ ENTRY(_reset)
 
 MEMORY {
   FLASH (rx)   : ORIGIN = 0x00000000, LENGTH = 0x08000000
-  RAM   (rw!x) : ORIGIN = 0x40000000, LENGTH = 0x80000000
+  RAM   (rw)   : ORIGIN = 0x40000000, LENGTH = 0x80000000
   BL31  (rwx)  : ORIGIN = 0x0e000000, LENGTH = 0x01000000
+}
+
+PHDRS {
+  flash PT_LOAD FLAGS(5);
+  ram   PT_LOAD FLAGS(6);
 }
 
 SECTIONS
@@ -38,14 +43,47 @@ SECTIONS
     *(.startup*)
     *(.text)
     *(.text*)
-  } > FLASH
+  } > FLASH :flash
 
   . = ALIGN(8);
   .rodata :{
     .__rodata_start__ = .;
     *(.rodata*)
     .__rodata_end__ = .;
-  } > FLASH
+  } > FLASH :flash
+
+  /*
+   * C/C++ initialization arrays.
+   */
+  .preinit_array : {
+    . = ALIGN(64);
+    __preinit_array_start = .;
+    KEEP (*(SORT(.preinit_array.*)))
+    KEEP (*(.preinit_array))
+    __preinit_array_end = .;
+  } > FLASH :flash
+
+  /**
+   * What is this for?
+   *
+   * if you look into libc source code, you will find
+   * a code snippet
+   */
+  .init_array : {
+    . = ALIGN(64);
+    __init_array_start = .;
+    KEEP (*(SORT(.init_array.*)))
+    KEEP (*(.init_array))
+    __init_array_end = .;
+  } > FLASH :flash
+
+  .fini_array : {
+    . = ALIGN(64);
+    __fini_array_start = .;
+    KEEP (*(SORT(.fini_array.*)))
+    KEEP (*(.fini_array))
+    __fini_array_end = .;
+  } > FLASH :flash
 
   /**
    * Notice the `AT` operator? It means that at runtime
@@ -67,67 +105,38 @@ SECTIONS
     *(.data)
     *(.data*)
     __data_end__ = .;
-  } > RAM AT > FLASH
+  } > RAM AT > FLASH :ram
 
   . = ALIGN(8);
-	.bss : {
+	.bss (NOLOAD) : {
     __bss_start__ = .;
     *(.bss*)
     *(.bss COMMON)
     __bss_end__ = .;
-  } > RAM
-
-  /*
-   * C/C++ initialization arrays.
-   */
-  .preinit_array : ALIGN(8)
-  {
-      __preinit_array_start = .;
-      KEEP(*(.preinit_array*))
-      __preinit_array_end = .;
-  } > FLASH
-
-  /**
-   * What is this for?
-   *
-   * if you look into libc source code, you will find
-   * a code snippet
-   */
-  .init_array : ALIGN(8)
-  {
-      __init_array_start = .;
-      KEEP(*(.init_array*))
-      __init_array_end = .;
-  } > FLASH
-
-  .fini_array : ALIGN(8)
-  {
-      __fini_array_start = .;
-      KEEP(*(.fini_array*))
-      __fini_array_end = .;
-  } > FLASH
+  } > RAM :NONE
 
   . = ALIGN(__bss_end__, 8);
-  .heap : {
+  .heap (NOLOAD) : {
 	  __heap_start = .;
     . += 0x1000;
     . = ALIGN(8);
 	  __heap_end = .;
-  }
+  } > RAM :NONE
 
   . = ALIGN(16);
-  .stack_el3 : {
-    . += 16K;
-    . = ALIGN(16);
-    __stack_top_el3 = .;
-  } > RAM
+  __stack_bottom_el3 = .;
+  . += 32K;
+  __stack_top_el3 = .;
 
   . = ALIGN(16);
-  .stack_el1 : {
-    . += 16K;
-    . = ALIGN(16);
-    __stack_top_el1 = .;
-  } > RAM
+  __stack_bottom_el2 = .;
+  . += 32K;
+  __stack_top_el2 = .;
+
+  . = ALIGN(16);
+  __stack_bottom_el1 = .;
+  . += 32K;
+  __stack_top_el1 = .;
 
   /**
   * start of the data section loadable memory
