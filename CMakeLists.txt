@@ -20,7 +20,8 @@ message(STATUS "Target Architecture: ${TARGET_ARCH}")
 add_executable(firmware
     src/main.c
     bsp/common/syscalls.c
-    #drivers/uart.c
+    drivers/opena64/uart_pl011.c
+    drivers/opena64/arm_gen_timer.c
     drivers/gic/gic_v3.c
     $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:bsp/aarch64/el_exceptions.c>
     $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:bsp/aarch64/startup.s>

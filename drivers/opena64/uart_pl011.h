@@ -1,28 +1,9 @@
 /*******************************************************************************
  * @file uart_pl011.h
  * @brief High level PL011 UART driver.
+ * @author Miguel Ugsimar <jmjugsimar@gmail.com>
  *
- * MIT License
- *
- * Copyright (c) 2026 Miguel Ugsimar
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * SPDX-License-Identifier: MIT
  *******************************************************************************/
 #ifndef UART_PL011__H
 #define UART_PL011__H
@@ -78,10 +59,37 @@ typedef void (*uart_pl011_irq_cb_t)(void *user_data);
  *
  */
 struct uart_pl011 {
-	struct uart_pl011_regs *p_reg; /*!< pointer to pl011 registers */
-	uart_pl011_irq_cb_t irq_cb;    /*!< interrupt callback function */
-	void *irq_cb_data;             /*!< user data to pass to interrupt callback */
+	uintptr_t reg;              /*!< address to pl011 registers */
+	uart_pl011_irq_cb_t irq_cb; /*!< interrupt callback function */
+	void *irq_cb_data;          /*!< user data to pass to interrupt callback */
 };
+
+/**
+ * @brief uart_pl011 struct initializer.
+ *
+ * @param _reg  register base address (uintptr_t)
+ */
+#define UART_PL011_INIT(_reg) {.reg = _reg}
+
+/**
+ * @brief convenient macro for declaration
+ *
+ * @param _name name of struct var
+ * @param _reg  register base address (uintptr_t)
+ */
+#define UART_PL011_DECLARE(_name, _reg) struct uart_pl011 _name = UART_PL011_INIT(_reg)
+
+/**
+ * @brief Default UART configuration.
+ *
+ */
+#define UART_PL011_DEFAULT_CFG                                                                     \
+	{                                                                                          \
+		.parity = 0,                                                                       \
+		.stop_bits = UART_CFG_STOP_1_BIT,                                                  \
+		.data_bits = UART_CFG_DATA_BITS_8,                                                 \
+		.flow_ctrl = 0,                                                                    \
+	}
 
 /**
  * @brief Initialise the uart configuration.

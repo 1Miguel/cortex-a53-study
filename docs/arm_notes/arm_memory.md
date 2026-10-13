@@ -87,6 +87,9 @@ uint32_t ccsidr = mrc(15, 1, 0 ,0, 0);
 ## Write Cache Policy
   * `write-through`: When data is written to cache, it is immediately written to memory. This keeps the cache and main memory sync but at the cost of increase in main memory traffic due to write transactions.
   * `write-back`: Writes are only performed in cache. This could cause data in memory to be **stale**. When cache is written , a **dirty** bit in cache is set to `1` to indicate that data is written in cache but not yet in main memory.
+  * `write-allocate`: or *allocate on write* means on *cache-miss*, fill the cache line from memory then update it, if *no write-allocate* just write data directly to memory without filling the cache line.
+
+Note that *write-through* and *write-back* describe what will happen at *cache-hit*. *write-allocate* describes what happen at *cache-miss*. So a *write-back* with *write-allocate* means on *cache-miss*, cache line will be filled with data from memory, then both the cache and memory will be updated simultaneously, while *write-through, write-allocate* will only write to cache line.
 
 ## Allocation Policy
   * *read-allocatation* policy indicates that at cache miss at *read*, *cacheline* will be filled by copying data from main memory, but cache miss at *write* will not fill the *cacheline*.
@@ -95,39 +98,6 @@ uint32_t ccsidr = mrc(15, 1, 0 ,0, 0);
 ## Clean and Invalidation
   * `invalidation` refers to cache line **valid** bit to be set to `0`. If its valid, then invalidate!
   * `clean` refers to write contents of all cache lines with **dirty** bits set to main memory.
-
-## PIPT and VIPT
-
-> [!Note] ARM core main cache (L1) always use N-way set associative cache. 
-> ``` text 
-> Associative cache address format:
->  +----------------+--------+---------+----------+
->  |     Tag        |   Set  |   Word  |   Byte   |
->  +----------------+--------+---------+----------+
-> 31              13 12     5 4       2 1         0
-> ```
-
-**Virtual Index Physical Tag**, means that *virtual address is used to determine the cache line index* but the *physical address is used for tag*. This resolves the issue of cache need for invalidation when MMU virtual to physical mapping changes. However this introduces new problem, since the associative cache uses bit [12:5] to determine the `set`, virtual address uses bit [12] for address translation (64KiB page size). This potentially creates a problem, two or more virtual address with different bit [13:12] could also point to the same physical address. This creates two or more cache entries that points to the same physical address, which means memory can already exist in the cache line with different virtual cache line index.
-```text
-                                  Virtual Address
- +----------------+-----------------------------+
- |      Index     |           offset            |
- +----------------+-----------------------------+
-31       |      12 11          |                0
-         v                     |
- +----------------+            |
- |   Translation  |            |
- +----------------+            |
-         |                     |
-         v                     v  Physical Address
- +----------------+-----------------------------+
- |      Index     |           offset            |
- +----------------+-----------------------------+
-31              12 11                           0
-```
-The solution to this is to use [page colouring](https://developer.arm.com/community/arm-community-blogs/b/architectures-and-processors-blog/posts/page-colouring-on-armv6-and-a-bit-on-armv7) scheme. Page colouring uses `bits[13:12]` to indicate a colour. A page allocator, when mapping virtual address to a physical address, will impose restriction, to ensure that a physical address will only be mapped to a single colour. physical address will be use both as cache line index and cache tag. This ensures that there would be no duplicate physical address tag in cache.
-
-All ARM cortex uses `PIPT` scheme for data cache and `VIPT` for instruction cache since usually, restriction in size can be imposed in instructions, which prevents wrapping of `bits[13:12]` which prevents having two virtual address being mapped to the same physical address.
 
 
 # Memory Management Unit
@@ -348,13 +318,6 @@ Wherein
 * `TEX`,`C`, `B` - Defines the type of memory. Memory could either be *Normal*, *Device* or *Strongly-Ordered*.
 * `XN` - Execute Never or no executable code should be in this memory region.
 
-> [!NOTE] Write Policies
-> *write-through* means data is written to a cache block is simultaneously written to main memory.
-> *write-back* means a dirty-bit(D) is associated with each cache block to indicate if memory is *stale*, only when cache block is evicted that memory is written back in main memory.
-> *write-allocate* or *allocate on write* means on *cache-miss*, fill the cache line from memory then update it, if *no write-allocate* just write data directly to memory without filling the cache line.
-> 
-> note that *write-through* and *write-back* describe what will happen at *cache-hit*. *write-allocate* describes what happen at *cache-miss*. So a *write-back* with *write-allocate* means on *cache-miss*, cache line will be filled with data from memory, then both the cache and memory will be updated simultaneously, while *write-through, write-allocate* will only write to cache line.
-
 (TODO)
 and part of our start up code is to build this table, we can easily do this via some directives:
 
@@ -372,3 +335,63 @@ mmu_l1_tbl:
 
 > [!NOTE] nG Field
 > The `nG` field is a flag the indicates if a memory page is *non-global*. A *non-global* region means the memory page translation is process-specific and would be related to the current `ASID` *Address Space Identifier*.
+
+## ARMv7 VMSA Long-descriptor Memory Region Attributes
+
+This table summarizes the memory-region attribute bits commonly used in ARMv7 VMSA long-descriptor translation entries (for example, the LPAE page/block descriptors used by the MMU). The main memory-type fields are `TEX[2:0]`, `C`, `B`, and `S`; `XN` and `AP` control execution and access permissions.
+
+## Core attribute bits
+
+| Bit(s) | Name | Meaning |
+| --- | --- | --- |
+| `TEX[2:0]` | Type Extension | Encodes the memory type family together with cacheability and shareability behavior. |
+| `C` | Cacheable | Enables caching for normal memory. |
+| `B` | Bufferable | Controls write buffering / write-back behavior for normal memory. |
+| `S` | Shareable | Marks the region as shareable across cores/clusters and/or devices. |
+| `AP[2:1]` | Access Permission | Controls Privileged/User read/write access. |
+| `XN` | Execute Never | Prevents execution from the region. |
+
+## Long-descriptor memory type encoding
+
+| `TEX[2:0]` | `C` | `B` | `S` | Memory type | Typical behavior |
+| --- | :---: | :---: | :---: | --- | --- |
+| `000` | `0` | `0` | `0` | Strongly Ordered | Strict ordering; no cache; no speculative access; used for MMIO control registers. |
+| `000` | `0` | `1` | `0` | Device, non-shareable | Peripheral memory; no cache; order preserved; not shared across cores. |
+| `000` | `0` | `1` | `1` | Device, shareable | Peripheral memory that may be shared across cores/clusters. |
+| `000` | `1` | `0` | `0` | Normal memory, WT, no WA | Write-through cache policy; writes propagate to memory; no write-allocate on miss. |
+| `000` | `1` | `0` | `1` | Normal memory, WT, shareable | Same as WT but shareable across cores/clusters. |
+| `000` | `1` | `1` | `0` | Normal memory, WB, WA | Write-back cache policy; write-allocate on miss; typical DRAM mapping. |
+| `000` | `1` | `1` | `1` | Normal memory, WB, shareable | Same as WB/WA but shareable. |
+| `001` | `x` | `x` | `x` | Normal memory, alternate TEX encoding | Alternative normal-memory attribute set; the exact cacheability/write policy depends on the implementation and MAIR/auxiliary settings. |
+| `010`..`111` | `x` | `x` | `x` | Reserved / implementation-defined | Use only with the exact ARM architecture encoding for the target system; do not assume generic behavior. |
+
+- `Strongly Ordered`: best for control/status registers and memory that must have strict ordering.
+- `Device`: used for memory-mapped peripherals; usually non-cacheable and may be shareable for multicore access.
+- `Normal`: used for RAM and application data; choose `WT` vs `WB` based on performance and coherency needs.
+- `S=1`: indicates a memory region may be shared with other cores or hardware agents.
+- `XN=1`: mark non-executable memory (for example, data or stack regions).
+
+## Access permission examples (`AP`)
+
+| `AP[2:1]` | Meaning |
+| --- | --- |
+| `00` | No access |
+| `01` | Privileged read-only, user no access |
+| `10` | Reserved / architecture-defined depending on descriptor format |
+| `11` | Full read/write access (privileged + user) |
+
+## Descriptor example
+
+```text
+0xC0E
+  = S=0, TEX=000, AP=11, Domain=0, C=1, B=1
+  = Normal, Write-Back, Write-Allocate memory
+```
+
+This corresponds to a typical cached RAM region for application data.
+
+## Notes
+
+- The exact meaning of `TEX`, `C`, and `B` depends on the descriptor type and the memory model in use.
+- `Strongly Ordered` and `Device` are non-cacheable by design.
+- In practice, ARM memory attributes are often summarized as `TEX/C/B/S` rather than as a standalone 1-byte attribute value.

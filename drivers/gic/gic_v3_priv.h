@@ -1,3 +1,9 @@
+/*******************************************************************************
+ * @author Miguel Ugsimar <jmjugsimar@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ *******************************************************************************/
+
 /* Cache and Share ability for ITS & Redistributor LPI state tables */
 #define GIC_BASER_CACHE_NGNRNE     (0x0UL) /* Device-nGnRnE */
 #define GIC_BASER_CACHE_INNERLIKE  (0x0UL) /* Same as Inner Cacheability. */
@@ -39,20 +45,7 @@
 #define GICD_IGROUPMODR0(base, n) (base + 0x0d00 + (n * 4))
 #define GICD_NSACR(base, n)       (base + 0x0e00 + (n * 4))
 
-
 /* Register bit definitions */
-
-/* GICD_CTLR Interrupt group definitions */
-#define GICD_CTLR_ENABLE_G0   (1u << 0)
-#define GICD_CTLR_ENABLE_G1NS (1u << 1)
-#define GICD_CTLR_ENABLE_G1S  (1u << 2)
-#define GICD_CTRL_ARE_S       (1u << 4)
-#define GICD_CTRL_ARE_NS      (1u << 5)
-#define GICD_CTRL_NS          (1u << 6)
-#define GICD_CGRL_E1NWF       (1u << 7)
-
-/* GICD_CTLR Register write progress bit */
-#define GICD_CTLR_RWP (1u << 31)
 
 /* GICR_CTLR, Redistributor Control Register bits */
 #define GICR_CTLR_ENABLE_LPIS (1u << 0)  /* enable gic lpi  */

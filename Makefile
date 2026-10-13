@@ -2,12 +2,14 @@
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # clang-format command
-CLANG_FORMAT := clang-format-18
+CLANG_FORMAT := clang-format
 
 # list of file that will be clang formatted
 CLANG_FORMAT_DIR := \
 	$(MAKEFILE_DIR)/bsp/aarch64 \
+	$(MAKEFILE_DIR)/bsp/aarch32 \
 	$(MAKEFILE_DIR)/drivers \
+	$(MAKEFILE_DIR)/drivers/gic \
 	$(MAKEFILE_DIR)/src
 
 .PHONY: clang_format

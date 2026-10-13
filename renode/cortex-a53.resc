@@ -1,7 +1,7 @@
 :name: Cortex-A53
 :description: This script runs a minimal code.
 
-$bin?=@build/firmware.elf
+$bin?=@build_aarch64/firmware.elf
 $name?="ARM Cortex-A53"
 
 using sysbus
@@ -16,3 +16,5 @@ macro reset
     sysbus LoadELF $bin
 """
 runMacro $reset
+
+machine StartGdbServer 3333

@@ -10,8 +10,11 @@
 /* Tells the linker that this is the program entry point */
 ENTRY(_reset)
 
+
 MEMORY {
   FLASH (rx)   : ORIGIN = 0x00000000, LENGTH = 0x08000000
+  GICD  (rw)   : ORIGIN = 0x08000000, LENGTH = 0x00010000
+  GICR  (rw)   : ORIGIN = 0x080A0000, LENGTH = 0x00010000
   RAM   (rw)   : ORIGIN = 0x40000000, LENGTH = 0x80000000
   BL31  (rwx)  : ORIGIN = 0x0e000000, LENGTH = 0x01000000
 }
@@ -23,6 +26,9 @@ PHDRS {
 
 SECTIONS
 {
+  PROVIDE(__gicd_base = ORIGIN(GICD));
+  PROVIDE(__gicr_base = ORIGIN(GICR));
+
   . = ALIGN(ORIGIN(FLASH), 8);
 
   /**

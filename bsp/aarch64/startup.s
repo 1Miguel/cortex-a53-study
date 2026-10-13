@@ -139,6 +139,21 @@ _init_cpu0:
   // Base Address Register (VBAR)
   msr VBAR_EL3, x1
 
+  // initialise gic and route to non-secure mode
+  mrs x0, icc_sre_el3
+  orr x0, x0, #(1 << 3) // Enable lower EL access to system register
+  orr x0, x0, #(1 << 2) // Disable FIQ bypass
+  orr x0, x0, #(1 << 1) // Disable IRQ bypass
+  orr x0, x0, #(1 << 0) // System reg access at EL3 enable
+  msr icc_sre_el3, x0
+
+  /* disable timer and masked (disable) interrupt */
+  mov x0, 0x02
+  msr CNTP_CTL_EL0, x0
+  /* set the timer frequency (armv8, cortex-a53) */
+  ldr x0, =62500000
+  msr CNTFRQ_EL0, x0
+                   
 // **************************************************************************
 _el3_init:
 	mrs x0, scr_el3

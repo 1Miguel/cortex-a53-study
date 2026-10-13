@@ -4,27 +4,7 @@
  *    for more info refer to refer to PrimeCell UART (PL011)
  *    r1p5 Technical Reference Manual
  *
- * MIT License
- *
- * Copyright (c) 2026 Miguel Ugsimar
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * SPDX-License-Identifier: MIT
  *******************************************************************************/
 
 #ifndef UART_Pl011_REGS__H
@@ -32,40 +12,20 @@
 
 #include <stdint.h>
 
-/**
- * @brief UART PL011 Register struct.
- */
-struct uart_pl011_regs {
-	volatile uint32_t DR;      // 0x000 Data Register
-	volatile uint32_t RSR_ECR; // 0x004 Receive Status / Error Clear
-	uint32_t RESERVED0[4];     // 0x008 - 0x014
-	volatile uint32_t FR;      // 0x018 Flag Register
-	uint32_t RESERVED1;        // 0x01C
-	volatile uint32_t ILPR;    // 0x020 IrDA Low-Power Counter
-	volatile uint32_t IBRD;    // 0x024 Integer Baud Rate Divisor
-	volatile uint32_t FBRD;    // 0x028 Fractional Baud Rate Divisor
-	volatile uint32_t LCR_H;   // 0x02C Line Control
-	volatile uint32_t CR;      // 0x030 Control
-	volatile uint32_t IFLS;    // 0x034 Interrupt FIFO Level Select
-	volatile uint32_t IMSC;    // 0x038 Interrupt Mask Set/Clear
-	volatile uint32_t RIS;     // 0x03C Raw Interrupt Status
-	volatile uint32_t MIS;     // 0x040 Masked Interrupt Status
-	volatile uint32_t ICR;     // 0x044 Interrupt Clear
-	volatile uint32_t DMACR;   // 0x048 DMA Control
-	uint32_t RESERVED2[997];   // 0x04C - 0xFCC
-	volatile uint32_t ITCR;    // 0xFCC Test Control
-	volatile uint32_t ITIP;    // 0xFD0 Integration Test Input
-	volatile uint32_t ITOP;    // 0xFD4 Integration Test Output
-	volatile uint32_t TDR;     // 0xFD8 Test Data Register
-	uint32_t PERIPHID0;        // 0xFE0
-	uint32_t PERIPHID1;        // 0xFE4
-	uint32_t PERIPHID2;        // 0xFE8
-	uint32_t PERIPHID3;        // 0xFEC
-	uint32_t PCELLID0;         // 0xFF0
-	uint32_t PCELLID1;         // 0xFF4
-	uint32_t PCELLID2;         // 0xFF8
-	uint32_t PCELLID3;         // 0xFFC
-};
+#define UARTDR(base)     ((uintptr_t)(base + 0x0000)) /* data register */
+#define UARTRSR(base)    ((uintptr_t)(base + 0x0004)) /* receive status register / error clear */
+#define UARTFR(base)     ((uintptr_t)(base + 0x0018)) /* flag register */
+#define UARTILPR(base)   ((uintptr_t)(base + 0x0020)) /* irDa low-power counter */
+#define UARTIBRD(base)   ((uintptr_t)(base + 0x0024)) /* integer baudrate */
+#define UARTFBRD(base)   ((uintptr_t)(base + 0x0028)) /* fractional baudrate */
+#define UARTLCR_H(base)  ((uintptr_t)(base + 0x002C)) /* line control register */
+#define UARTCR(base)     ((uintptr_t)(base + 0x0030)) /* control register */
+#define UARTIFLS(base)   ((uintptr_t)(base + 0x0034)) /* interrupt fifo level select */
+#define UARTIMSC(base)   ((uintptr_t)(base + 0x0038)) /* interrupt mask set/clear */
+#define UARTRIS(base)    ((uintptr_t)(base + 0x003C)) /* raw interrupt Status */
+#define UARTMIS(base)    ((uintptr_t)(base + 0x0040)) /* masked interrupt Status */
+#define UARTICR(base)    ((uintptr_t)(base + 0x0044)) /* interrupt Clear */
+#define UARTIDMACR(base) ((uintptr_t)(base + 0x0048)) /* dma Control */
 
 /* ============================================================================
  * DR - Data Register
