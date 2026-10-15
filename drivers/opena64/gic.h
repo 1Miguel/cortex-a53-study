@@ -1,31 +1,10 @@
 /*******************************************************************************
- * @file gic_v3.h
- * @brief GIC v3 driver.
+ * @author Miguel Ugsimar <jmjugsimar@gmail.com>
  *
- * MIT License
- *
- * Copyright (c) 2026 Miguel Ugsimar
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * SPDX-License-Identifier: MIT
  *******************************************************************************/
-#ifndef __GIC_VECTORS__H
-#define __GIC_VECTORS__H
+#ifndef __GIC__H
+#define __GIC__H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -60,7 +39,7 @@ void gic_v3_int_disable(unsigned int int_id);
  *
  * @retval true if interrupt is enabled.
  */
-void gic_v3_int_is_enable(unsigned int int_id);
+bool gic_v3_int_is_enable(unsigned int int_id);
 
 /**
  * @brief Check if a given interrupt id is pending.
@@ -69,7 +48,7 @@ void gic_v3_int_is_enable(unsigned int int_id);
  *
  * @retval true if interrupt is pending.
  */
-void gic_v3_int_is_pending(unsigned int int_id);
+bool gic_v3_int_is_pending(unsigned int int_id);
 
 /**
  * @brief Set pending interrupt of a given interrupt id.
@@ -108,4 +87,4 @@ void gic_v3_raise_sgi(unsigned int sgi_id, uint64_t target_aff, uint16_t target_
 }
 #endif // __cplusplus
 
-#endif // __GIC_VECTORS__H
+#endif // __GIC__H

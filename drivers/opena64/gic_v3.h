@@ -23,6 +23,17 @@ extern "C" {
 #define GIC_IRQ_ID_NUM_PPI (32)
 #endif // GIC_IRQ_ID_NUM_PPI
 
+#ifndef GICR_SGI_BASE
+/** @brief Redistributor SGI frame base address 
+ *
+ * NOTE that redistributor defines two 64KiB(0x10000) frames one for the
+ * RD_BASE and the other for SGI_BASE
+ *
+ * See the GIC v3/v4 spec section The GIC Redistributor register map.
+ * */
+#define GICR_SGI_BASE (0x10000)
+#endif // GICR_SGI_BASE
+
 /** @brief Software generated interrupt starting interrupt id */
 #define GIC_SGI_INT_ID_START (0)
 
@@ -33,9 +44,9 @@ extern "C" {
 #define GIC_SPI_INT_ID_START (32)
 
 #ifndef GIC_V3_1
-#define GIC_IS_SPI(n) ((n >= 32u) && (n <= 1019u))
+#define GIC_IS_SPI(n) ((n >= 32u) || (n <= 1019u))
 #else
-#define GIC_IS_SPI(n) ((n >= 32u) && (n <= 1019u)) || ((n >= 4096u) && (n <= 5119u))
+#define GIC_IS_SPI(n) ((n >= 32u) || (n <= 1019u)) || ((n >= 4096u) || (n <= 5119u))
 #endif // GIC_V3_1
 
 #define GIC_IS_LPI(n) (n >= 8192u)
@@ -64,18 +75,18 @@ extern "C" {
 #define GICR_TYPER(base)          (base + 0x0008)
 #define GICR_STATUSR(base)        (base + 0x0010)
 #define GICR_WAKER(base)          (base + 0x0014)
-#define GICR_IGROUPR0(base)       (base + 0x0080)
-#define GICR_ISENABLER0(base)     (base + 0x0100)
-#define GICR_ICENABLER0(base)     (base + 0x0180)
-#define GICR_ISPENDR0(base)       (base + 0x0200)
-#define GICR_ICPENDR0(base)       (base + 0x0280)
-#define GICR_ISACTIVER0(base)     (base + 0x0300)
-#define GICR_ICACTIVER0(base)     (base + 0x0380)
-#define GICR_IPRIORITYRn(base, n) (base + 0x0400 + (n * 4))
-#define GICR_ICFGR0(base)         (base + 0x0c00)
-#define GICR_ICFGR1(base)         (base + 0x0c04)
-#define GICR_IGROUPMODR0(base)    (base + 0x0d00)
-#define GICR_NSACR(base, n)       (base + 0x0e00)
+#define GICR_IGROUPR0(base)       (base + GICR_SGI_BASE + 0x0080)
+#define GICR_ISENABLER0(base)     (base + GICR_SGI_BASE + 0x0100)
+#define GICR_ICENABLER0(base)     (base + GICR_SGI_BASE + 0x0180)
+#define GICR_ISPENDR0(base)       (base + GICR_SGI_BASE + 0x0200)
+#define GICR_ICPENDR0(base)       (base + GICR_SGI_BASE + 0x0280)
+#define GICR_ISACTIVER0(base)     (base + GICR_SGI_BASE + 0x0300)
+#define GICR_ICACTIVER0(base)     (base + GICR_SGI_BASE + 0x0380)
+#define GICR_IPRIORITYRn(base, n) (base + GICR_SGI_BASE + 0x0400 + (n))
+#define GICR_ICFGR0(base)         (base + GICR_SGI_BASE + 0x0c00)
+#define GICR_ICFGR1(base)         (base + GICR_SGI_BASE + 0x0c04)
+#define GICR_IGROUPMODR0(base)    (base + GICR_SGI_BASE + 0x0d00)
+#define GICR_NSACR(base, n)       (base + GICR_SGI_BASE + 0x0e00)
 
 /* GICR Register bit defintions */
 #define GICR_WAKER_CA_BIT_MSK (1u << 1) /* children asleep */
@@ -94,14 +105,19 @@ extern "C" {
 #define GICD_CGRL_E1NWF       (1u << 7)
 #define GICD_CTLR_RWP         (1u << 31) /* GICD_CTLR Register write progress bit */
 
-/* Non-secure view */
+/* GICD_CTLR Non-secure view */
 #define GICD_CTLR_ENABLE_G1A (1u << 1)
+
+/* GICD_TYPER bit fields */
+#define GICD_TYPER_ITLINESNUMBER_BIT_MSK (0x1F)
 
 /* CPUIF bit fields */
 #define ICC_SRE_SRE_ENABLE    (1ull << 0) /* sysreg gic interface enable */
 #define ICC_SRE_DFB_ENABLE    (1ull << 1) /* disable fiq bypass */
 #define ICC_SRE_DIB_ENABLE    (1ull << 2) /* disable irq bypass */
 #define ICC_SRE_LOW_EL_ENABLE (1ull << 3) /* low EL access enable */
+
+#define ICC_CTLR_EL1_EOI_MODE (1ull << 1)
 
 #define ICC_CTLR_PMHE (1ull << 6) /* priority mask hint enable */
 #define ICC_CTLR_RM   (1ull << 5) /* set if EL3 can ack or observe interrupts */
