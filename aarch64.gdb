@@ -28,11 +28,13 @@ define infoall
     backtrace
 end
 
+define info_cntp
+  info registers CNTFRQ_EL0 CNTP_CTL_EL0 CNTP_TVAL_EL0 CNTP_CVAL_EL0
+end
+
 delete
 
 machine_reset
 
 b _reset
-b _bss_end
-b _bss_clear
 b main

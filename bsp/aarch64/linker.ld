@@ -10,18 +10,11 @@
 /* Tells the linker that this is the program entry point */
 ENTRY(_reset)
 
-
 MEMORY {
   FLASH (rx)   : ORIGIN = 0x00000000, LENGTH = 0x08000000
   GICD  (rw)   : ORIGIN = 0x08000000, LENGTH = 0x00010000
   GICR  (rw)   : ORIGIN = 0x080A0000, LENGTH = 0x00010000
   RAM   (rw)   : ORIGIN = 0x40000000, LENGTH = 0x80000000
-  BL31  (rwx)  : ORIGIN = 0x0e000000, LENGTH = 0x01000000
-}
-
-PHDRS {
-  flash PT_LOAD FLAGS(5);
-  ram   PT_LOAD FLAGS(6);
 }
 
 SECTIONS
@@ -49,25 +42,25 @@ SECTIONS
     *(.startup*)
     *(.text)
     *(.text*)
-  } > FLASH :flash
+  } > FLASH
 
   . = ALIGN(8);
   .rodata :{
     .__rodata_start__ = .;
     *(.rodata*)
     .__rodata_end__ = .;
-  } > FLASH :flash
+  } > FLASH
 
   /*
    * C/C++ initialization arrays.
    */
-  .preinit_array : {
+  .preinit_array (READONLY) : {
     . = ALIGN(64);
     __preinit_array_start = .;
     KEEP (*(SORT(.preinit_array.*)))
     KEEP (*(.preinit_array))
     __preinit_array_end = .;
-  } > FLASH :flash
+  } > FLASH
 
   /**
    * What is this for?
@@ -75,21 +68,28 @@ SECTIONS
    * if you look into libc source code, you will find
    * a code snippet
    */
-  .init_array : {
+  .init_array (READONLY) : {
     . = ALIGN(64);
     __init_array_start = .;
     KEEP (*(SORT(.init_array.*)))
     KEEP (*(.init_array))
     __init_array_end = .;
-  } > FLASH :flash
+  } > FLASH
 
-  .fini_array : {
+  .fini_array (READONLY) : {
     . = ALIGN(64);
     __fini_array_start = .;
     KEEP (*(SORT(.fini_array.*)))
     KEEP (*(.fini_array))
     __fini_array_end = .;
-  } > FLASH :flash
+  } > FLASH
+
+  .gic_vec (READONLY) : {
+    . = ALIGN(8);
+    __gic_vec_start__ = .;
+    KEEP(*(.gic_vec_tbl))
+    __gic_vec_end__ = .;
+  } > FLASH
 
   /**
    * Notice the `AT` operator? It means that at runtime
@@ -111,7 +111,7 @@ SECTIONS
     *(.data)
     *(.data*)
     __data_end__ = .;
-  } > RAM AT > FLASH :ram
+  } > RAM AT > FLASH
 
   . = ALIGN(8);
 	.bss (NOLOAD) : {
@@ -119,7 +119,7 @@ SECTIONS
     *(.bss*)
     *(.bss COMMON)
     __bss_end__ = .;
-  } > RAM :NONE
+  } > RAM
 
   . = ALIGN(__bss_end__, 8);
   .heap (NOLOAD) : {
@@ -127,7 +127,7 @@ SECTIONS
     . += 0x1000;
     . = ALIGN(8);
 	  __heap_end = .;
-  } > RAM :NONE
+  } > RAM
 
   . = ALIGN(16);
   __stack_bottom_el3 = .;

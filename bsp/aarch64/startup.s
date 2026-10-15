@@ -111,8 +111,8 @@ _reset:
   // the lsb bytes contains the cpu id
   and x1, x1, 0xFF
   // initialise stack ptr depending on the processor
-  // cmp x1, 0
-  // beq _init_cpu0
+  cmp x1, 0
+  beq _init_cpu0
 
 _init_cpu0:
   // ... the ldr instruction below is a "pseudo instruction" it
@@ -140,12 +140,19 @@ _init_cpu0:
   msr VBAR_EL3, x1
 
   // initialise gic and route to non-secure mode
-  mrs x0, icc_sre_el3
+  mrs x0, ICC_SRE_EL3
   orr x0, x0, #(1 << 3) // Enable lower EL access to system register
   orr x0, x0, #(1 << 2) // Disable FIQ bypass
   orr x0, x0, #(1 << 1) // Disable IRQ bypass
   orr x0, x0, #(1 << 0) // System reg access at EL3 enable
-  msr icc_sre_el3, x0
+  msr ICC_SRE_EL3, x0
+  isb
+
+  // disable secure state GICD.DS
+  ldr x0, =__gicd_base
+  ldr w1, [x0]
+  orr w1, w1, #(1U << 6)
+  str w1, [x0]
 
   /* disable timer and masked (disable) interrupt */
   mov x0, 0x02
@@ -194,7 +201,7 @@ _el1_entry:
   ldr x0, =__stack_top_el1
   mov sp, x0
 
-  ldr x1, =_el1_exc_vector_table
+  ldr x1, =_exc_vector_table
   msr vbar_el1, X1
   isb
 
@@ -248,6 +255,8 @@ _bss_loop:
 _bss_end:
   // call the libc initialization routines
   // bl __libc_init_array
+  // enable irqs before jumping to main
+  msr daifclr, #2
   // jump to main
   bl main
   b .
@@ -351,7 +360,7 @@ _sp0_sync_handler:
   eret
 _sp0_irq_handler:
   saveregister
-  bl el_sp0_irq_handler
+  bl gic_v3_irq_handler
   restoreregister
   eret
 _sp0_fiq_handler:
@@ -373,7 +382,7 @@ _spx_sync_handler:
   eret
 _spx_irq_handler:
   saveregister
-  bl el_spx_irq_handler
+  bl gic_v3_irq_handler
   restoreregister
   eret
 _spx_fiq_handler:
@@ -399,39 +408,3 @@ _a32_irq_handler:
 _a32_fiq_handler:
 _a32_serror_handler:
   b .
-
-
-.balign 0x800
-_el1_exc_vector_table:
-  b _sp0_sync_handler
-  .balign 0x80 // ensure 128-byte alignment
-  b _sp0_irq_handler
-  .balign 0x80
-  b _sp0_fiq_handler
-  .balign 0x80
-  b _sp0_serror_handler
-  .balign 0x80
-  b _spx_sync_handler
-  .balign 0x80
-  b _spx_irq_handler
-  .balign 0x80
-  b _spx_fiq_handler
-  .balign 0x80
-  b _spx_serror_handler
-  .balign 0x80
-  b _low_el_sync_handler
-  .balign 0x80
-  b _low_el_irq_handler
-  .balign 0x80
-  b _low_el_fiq_handler
-  .balign 0x80
-  b _low_el_serror_handler
-  .balign 0x80
-  b _a32_sync_handler
-  .balign 0x80
-  b _a32_irq_handler
-  .balign 0x80
-  b _a32_fiq_handler
-  .balign 0x80
-  b _a32_serror_handler
-

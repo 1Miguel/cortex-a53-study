@@ -1,3 +1,4 @@
+
 void __attribute__((weak)) el_sp0_sync_handler(void)
 {
 	while (1)
@@ -32,8 +33,7 @@ void __attribute__((weak)) el_spx_sync_handler(void)
 
 void __attribute__((weak)) el_spx_irq_handler(void)
 {
-	while (1)
-		;
+  while (1);
 }
 
 void __attribute__((weak)) el_spx_fiq_handler(void)
