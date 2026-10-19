@@ -42,10 +42,11 @@ int uart_pl011_init(struct uart_pl011 *uart, struct uart_pl011_cfg *cfg)
 
 int uart_pl011_set_irq_cb(struct uart_pl011 *uart, uart_pl011_irq_cb_t cb, void *cb_data)
 {
-  if (!uart)
-    return -EINVAL;
-  uart->irq_cb = cb;
-  uart->irq_cb_data = cb_data;
+	if (!uart) {
+		return -EINVAL;
+	}
+	uart->irq_cb = cb;
+	uart->irq_cb_data = cb_data;
 }
 
 int uart_pl011_enable(struct uart_pl011 *uart)
@@ -54,7 +55,7 @@ int uart_pl011_enable(struct uart_pl011 *uart)
 		return -EINVAL;
 	}
 
-  fifo_flush(uart);
+	fifo_flush(uart);
 
 	mmio_bit_set_u32(UARTCR(uart->reg),
 			 (UART_PL011_CR_UARTEN_BIT_MSK | UART_PL011_CR_TXE_BIT_MSK |
@@ -86,12 +87,12 @@ char uart_pl011_poll_in(struct uart_pl011 *uart)
 
 int uart_pl011_rx_fifo_ready(struct uart_pl011 *uart)
 {
-  uint16_t fr;
+	uint16_t fr;
 	if (!uart) {
 		return -EINVAL;
 	}
-  fr = mmio_bit_get_u32(UARTFR(uart->reg), UART_PL011_FR_RXFE_BIT_MSK);
-  return fr ? 0 : 1;
+	fr = mmio_bit_get_u32(UARTFR(uart->reg), UART_PL011_FR_RXFE_BIT_MSK);
+	return fr ? 0 : 1;
 }
 
 int uart_pl011_tx_fifo(struct uart_pl011 *uart, uint8_t *buf, uint16_t len)

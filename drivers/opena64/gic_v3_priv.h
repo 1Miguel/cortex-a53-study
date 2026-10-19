@@ -4,272 +4,137 @@
  * SPDX-License-Identifier: MIT
  *******************************************************************************/
 
-/* Cache and Share ability for ITS & Redistributor LPI state tables */
-#define GIC_BASER_CACHE_NGNRNE     (0x0UL) /* Device-nGnRnE */
-#define GIC_BASER_CACHE_INNERLIKE  (0x0UL) /* Same as Inner Cacheability. */
-#define GIC_BASER_CACHE_NCACHEABLE (0x1UL) /* Non-cacheable */
-#define GIC_BASER_CACHE_RAWT       (0x2UL) /* Cacheable R-allocate, W-through */
-#define GIC_BASER_CACHE_RAWB       (0x3UL) /* Cacheable R-allocate, W-back */
-#define GIC_BASER_CACHE_WAWT       (0x4UL) /* Cacheable W-allocate, W-through */
-#define GIC_BASER_CACHE_WAWB       (0x5UL) /* Cacheable W-allocate, W-back */
-#define GIC_BASER_CACHE_RAWAWT     (0x6UL) /* Cacheable R-allocate, W-allocate, W-through */
-#define GIC_BASER_CACHE_RAWAWB     (0x7UL) /* Cacheable R-allocate, W-allocate, W-back */
-#define GIC_BASER_SHARE_NO         (0x0UL) /* Non-shareable */
-#define GIC_BASER_SHARE_INNER      (0x1UL) /* Inner Shareable */
-#define GIC_BASER_SHARE_OUTER      (0x2UL) /* Outer Shareable */
+#ifndef __GIC_V3__H
+#define __GIC_V3__H
 
-/* SGI base is at 64K offset from Redistributor */
-#define GICR_SGI_BASE_OFF 0x10000
+#include <stdint.h>
 
-/* GICR registers offset from RD_base(n) */
-#define GICR_CTLR      0x0000
-#define GICR_IIDR      0x0004
-#define GICR_TYPER     0x0008
-#define GICR_STATUSR   0x0010
-#define GICR_WAKER     0x0014
-#define GICR_PWRR      0x0024
-#define GICR_PROPBASER 0x0070
-#define GICR_PENDBASER 0x0078
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* Base register addresses */
-#define GICD_ISENABLER(base, n)   (base + 0x0100 + (n * 4))
-#define GICD_IGROUPR(base, n)     (base + 0x0080 + (n * 4))
-#define GICD_ICENABLER(base, n)   (base + 0x0180 + (n * 4))
-#define GICD_ISPENDR(base, n)     (base + 0x0200 + (n * 4))
-#define GICD_ICPENDR(base, n)     (base + 0x0280 + (n * 4))
-#define GICD_ISACTIVER(base, n)   (base + 0x0300 + (n * 4))
-#define GICD_ICACTIVER(base, n)   (base + 0x0380 + (n * 4))
-#define GICD_IPRIORITYR(base, n)  (base + 0x0400 + (n * 4))
-#define GICD_ITARGETSR(base, n)   (base + 0x0800 + (n * 4))
-#define GICD_ICFGR(base, n)       (base + 0x0c00 + (n * 4))
-#define GICD_IGROUPMODR0(base, n) (base + 0x0d00 + (n * 4))
-#define GICD_NSACR(base, n)       (base + 0x0e00 + (n * 4))
+#ifndef GIC_IRQ_ID_NUM_SGI
+/** @brief Max number of Software Generated Interrupts (SGI) supported */
+#define GIC_IRQ_ID_NUM_SGI (16)
+#endif // GIC_IRQ_ID_NUM_SGI
 
-/* Register bit definitions */
+#ifndef GIC_IRQ_ID_NUM_PPI
+/** @brief Max number of Private Peripheral Interrupts (PPI) supported */
+#define GIC_IRQ_ID_NUM_PPI (32)
+#endif // GIC_IRQ_ID_NUM_PPI
 
-/* GICR_CTLR, Redistributor Control Register bits */
-#define GICR_CTLR_ENABLE_LPIS (1u << 0)  /* enable gic lpi  */
-#define gICR_CTLR_RWP         (1u << 3)  /* read/write protect bit */
-#define GICR_CTLR_DPG0        (1u << 24) /* disable processor selection for group0 interrupts */
-#define GICR_CTLR_DPG1NS                                                                           \
-	(1u << 25) /* disable processor selection for group1 non-secure interrupts */
-#define GICR_CTLR_DPG1S (1u << 26) /* disable processor selection for group1 secure interrupts */
-#define GICR_CTLR_UWP   (1u << 31) /* upstream write pending */
+#ifndef GICR_SGI_BASE
+/** @brief Redistributor SGI frame base address
+ *
+ * NOTE that redistributor defines two 64KiB(0x10000) frames one for the
+ * RD_BASE and the other for SGI_BASE
+ *
+ * See the GIC v3/v4 spec section The GIC Redistributor register map.
+ * */
+#define GICR_SGI_BASE (0x10000)
+#endif // GICR_SGI_BASE
 
-/* GICR_IIDR */
-#define GICR_IIDR_PRODUCT_ID_SHIFT     24
-#define GICR_IIDR_PRODUCT_ID_MASK      0xFFUL
-#define GICR_IIDR_PRODUCT_ID_GET(_val) MASK_GET(_val, GICR_IIDR_PRODUCT_ID)
+/** @brief Software generated interrupt starting interrupt id */
+#define GIC_SGI_INT_ID_START (0)
 
-/* GICR_TYPER */
-#define GICR_TYPER_AFFINITY_VALUE_SHIFT       32
-#define GICR_TYPER_AFFINITY_VALUE_MASK        0xFFFFFFFFUL
-#define GICR_TYPER_AFFINITY_VALUE_GET(_val)   MASK_GET(_val, GICR_TYPER_AFFINITY_VALUE)
-#define GICR_TYPER_LAST_SHIFT                 4
-#define GICR_TYPER_LAST_MASK                  0x1UL
-#define GICR_TYPER_LAST_GET(_val)             MASK_GET(_val, GICR_TYPER_LAST)
-#define GICR_TYPER_PROCESSOR_NUMBER_SHIFT     8
-#define GICR_TYPER_PROCESSOR_NUMBER_MASK      0xFFFFUL
-#define GICR_TYPER_PROCESSOR_NUMBER_GET(_val) MASK_GET(_val, GICR_TYPER_PROCESSOR_NUMBER)
+/** @brief Private generated interrupt starting interrupt id */
+#define GIC_PPI_INT_ID_START (16)
 
-/* GICR_WAKER */
-#define GICR_WAKER_PS 1
-#define GICR_WAKER_CA 2
+/** @brief Shared generated interrupt starting interrupt id */
+#define GIC_SPI_INT_ID_START (32)
 
-/* GICR_PWRR */
-#define GICR_PWRR_RDPD  0
-#define GICR_PWRR_RDAG  1
-#define GICR_PWRR_RDGPO 3
+#ifndef GIC_V3_1
+#define GIC_IS_SPI(n) ((n >= 32u) && (n <= 1019u))
+#else
+#define GIC_IS_SPI(n) ((n >= 32u) && (n <= 1019u)) || ((n >= 4096u) && (n <= 5119u))
+#endif // GIC_V3_1
 
-/* GICR_PROPBASER */
-#define GITR_PROPBASER_ID_BITS_MASK       0x1fUL
-#define GITR_PROPBASER_INNER_CACHE_SHIFT  7
-#define GITR_PROPBASER_INNER_CACHE_MASK   0x7UL
-#define GITR_PROPBASER_SHAREABILITY_SHIFT 10
-#define GITR_PROPBASER_SHAREABILITY_MASK  0x3UL
-#define GITR_PROPBASER_ADDR_SHIFT         12
-#define GITR_PROPBASER_ADDR_MASK          0xFFFFFFFFFFUL
-#define GITR_PROPBASER_OUTER_CACHE_SHIFT  56
-#define GITR_PROPBASER_OUTER_CACHE_MASK   0x7UL
+#define GIC_IS_LPI(n) (n >= 8192u)
 
-/* GICR_PENDBASER */
-#define GITR_PENDBASER_INNER_CACHE_SHIFT  7
-#define GITR_PENDBASER_INNER_CACHE_MASK   0x7UL
-#define GITR_PENDBASER_SHAREABILITY_SHIFT 10
-#define GITR_PENDBASER_SHAREABILITY_MASK  0x3UL
-#define GITR_PENDBASER_ADDR_SHIFT         16
-#define GITR_PENDBASER_ADDR_MASK          0xFFFFFFFFFUL
-#define GITR_PENDBASER_OUTER_CACHE_SHIFT  56
-#define GITR_PENDBASER_OUTER_CACHE_MASK   0x7UL
-#define GITR_PENDBASER_PTZ                BIT64(62)
+/* Address access from GIC Distributor base address */
+#define GICD_CTLR(base)           (base + 0x0000)
+#define GICD_TYPER(base)          (base + 0x0004)
+#define GICD_IIDR(base)           (base + 0x0008)
+#define GICD_TYPER2(base)         (base + 0x0010)
+#define GICD_ISENABLERn(base, n)  (base + 0x0100 + ((n) * 4))
+#define GICD_IGROUPRn(base, n)    (base + 0x0080 + ((n) * 4))
+#define GICD_ICENABLERn(base, n)  (base + 0x0180 + ((n) * 4))
+#define GICD_ISPENDRn(base, n)    (base + 0x0200 + ((n) * 4))
+#define GICD_ICPENDRn(base, n)    (base + 0x0280 + ((n) * 4))
+#define GICD_ISACTIVERn(base, n)  (base + 0x0300 + ((n) * 4))
+#define GICD_ICACTIVERn(base, n)  (base + 0x0380 + ((n) * 4))
+#define GICD_IPRIORITYRn(base, n) (base + 0x0400 + (n))
+#define GICD_ITARGETSRn(base, n)  (base + 0x0800 + ((n) * 4))
+#define GICD_ICFGRn(base, n)      (base + 0x0c00 + ((n) * 4))
+#define GICD_IGROUPMODRn(base, n) (base + 0x0d00 + ((n) * 4))
+#define GICD_NSACRn(base, n)      (base + 0x0e00 + ((n) * 4))
+#define GICD_IROUTERn(base, n)    (base + 0x6000 + ((n) * 8))
 
-/* GICD_IROUTER */
-#define GIC_DIST_IROUTER 0x6000
-#define IROUTER(base, n) (base + GIC_DIST_IROUTER + (n) * 8)
+/* Address access from GIC Redistributor base address */
+#define GICR_CTLR(base)           (base + 0x0000)
+#define GICR_IIDR(base)           (base + 0x0004)
+#define GICR_TYPER(base)          (base + 0x0008)
+#define GICR_STATUSR(base)        (base + 0x0010)
+#define GICR_WAKER(base)          (base + 0x0014)
+#define GICR_IGROUPR0(base)       (base + GICR_SGI_BASE + 0x0080)
+#define GICR_ISENABLER0(base)     (base + GICR_SGI_BASE + 0x0100)
+#define GICR_ICENABLER0(base)     (base + GICR_SGI_BASE + 0x0180)
+#define GICR_ISPENDR0(base)       (base + GICR_SGI_BASE + 0x0200)
+#define GICR_ICPENDR0(base)       (base + GICR_SGI_BASE + 0x0280)
+#define GICR_ISACTIVER0(base)     (base + GICR_SGI_BASE + 0x0300)
+#define GICR_ICACTIVER0(base)     (base + GICR_SGI_BASE + 0x0380)
+#define GICR_IPRIORITYRn(base, n) (base + GICR_SGI_BASE + 0x0400 + (n))
+#define GICR_ICFGR0(base)         (base + GICR_SGI_BASE + 0x0c00)
+#define GICR_ICFGR1(base)         (base + GICR_SGI_BASE + 0x0c04)
+#define GICR_IGROUPMODR0(base)    (base + GICR_SGI_BASE + 0x0d00)
+#define GICR_NSACR(base, n)       (base + GICR_SGI_BASE + 0x0e00)
 
-/* GICD_IROUTERnE for GICv3.1 Extended SPI Range */
-#define GIC_DIST_IROUTERnE 0x8000
-#define IROUTERnE(base, n) (base + GIC_DIST_IROUTERnE + (n) * 8)
+/* GICR Register bit defintions */
+#define GICR_WAKER_CA_BIT_MSK (1u << 2) /* children asleep */
+#define GICR_WAKER_PS_BIT_MSK (1u << 1) /* processor sleep */
 
-/*
- * ITS registers, offsets from ITS_base
- */
-#define GITS_CTLR     (0x0000)
-#define GITS_IIDR     (0x0004)
-#define GITS_TYPER    (0x0008)
-#define GITS_STATUSR  (0x0040)
-#define GITS_UMSIR    (0x0048)
-#define GITS_CBASER   (0x0080)
-#define GITS_CWRITER  (0x0088)
-#define GITS_CREADR   (0x0090)
-#define GITS_BASER(n) (0x0100 + ((n) * 8))
+/* GICR_CTLR Register bit definitions */
+#define GICR_CTLR_RWP (1u << 3)
 
-#define GITS_TRANSLATER 0x10040
+/* GICD_CTLR Interrupt group definitions */
+#define GICD_CTLR_ENABLE_G0   (1u << 0)
+#define GICD_CTLR_ENABLE_G1NS (1u << 1)
+#define GICD_CTLR_ENABLE_G1S  (1u << 2)
+#define GICD_CTRL_ARE_S       (1u << 4)
+#define GICD_CTRL_ARE_NS      (1u << 5)
+#define GICD_CTRL_NS          (1u << 6)
+#define GICD_CGRL_E1NWF       (1u << 7)
+#define GICD_CTLR_RWP         (1u << 31) /* GICD_CTLR Register write progress bit */
 
-/* ITS CTLR register */
-#define GITS_CTLR_ENABLED_SHIFT    0
-#define GITS_CTLR_ENABLED_MASK     0x1UL
-#define GITS_CTLR_ITS_NUMBER_SHIFT 4
-#define GITS_CTLR_ITS_NUMBER_MASK  0xfUL
-#define GITS_CTLR_QUIESCENT_SHIFT  31
-#define GITS_CTLR_QUIESCENT_MASK   0x1UL
+/* GICD_CTLR Non-secure view */
+#define GICD_CTLR_NS_ENABLE_G1  (1u << 0)
+#define GICD_CTLR_NS_ENABLE_G1A (1u << 1)
+#define GICD_CTRL_NS_ARE_NS     (1u << 4)
 
-#define GITS_CTLR_ENABLED_GET(_val)   MASK_GET(_val, GITS_CTLR_ENABLED)
-#define GITS_CTLR_QUIESCENT_GET(_val) MASK_GET(_val, GITS_CTLR_QUIESCENT)
+/* GICD_TYPER bit fields */
+#define GICD_TYPER_ITLINESNUMBER_BIT_MSK (0x1F)
 
-/* ITS TYPER register */
-#define GITS_TYPER_PHY_SHIFT            0
-#define GITS_TYPER_PHY_MASK             0x1UL
-#define GITS_TYPER_VIRT_SHIFT           1
-#define GITS_TYPER_VIRT_MASK            0x1UL
-#define GITS_TYPER_ITT_ENTRY_SIZE_SHIFT 4
-#define GITS_TYPER_ITT_ENTRY_SIZE_MASK  0xfUL
-#define GITS_TYPER_IDBITS_SHIFT         8
-#define GITS_TYPER_IDBITS_MASK          0x1fUL
-#define GITS_TYPER_DEVBITS_SHIFT        13
-#define GITS_TYPER_DEVBITS_MASK         0x1fUL
-#define GITS_TYPER_SEIS_SHIFT           18
-#define GITS_TYPER_SEIS_MASK            0x1UL
-#define GITS_TYPER_PTA_SHIFT            19
-#define GITS_TYPER_PTA_MASK             0x1UL
-#define GITS_TYPER_HCC_SHIFT            24
-#define GITS_TYPER_HCC_MASK             0xffUL
-#define GITS_TYPER_CIDBITS_SHIFT        32
-#define GITS_TYPER_CIDBITS_MASK         0xfUL
-#define GITS_TYPER_CIL_SHIFT            36
-#define GITS_TYPER_CIL_MASK             0x1UL
+/* CPUIF bit fields */
+#define ICC_SRE_SRE_ENABLE    (1ull << 0) /* sysreg gic interface enable */
+#define ICC_SRE_DFB_ENABLE    (1ull << 1) /* disable fiq bypass */
+#define ICC_SRE_DIB_ENABLE    (1ull << 2) /* disable irq bypass */
+#define ICC_SRE_LOW_EL_ENABLE (1ull << 3) /* low EL access enable */
 
-#define GITS_TYPER_ITT_ENTRY_SIZE_GET(_val) MASK_GET(_val, GITS_TYPER_ITT_ENTRY_SIZE)
-#define GITS_TYPER_PTA_GET(_val)            MASK_GET(_val, GITS_TYPER_PTA)
-#define GITS_TYPER_HCC_GET(_val)            MASK_GET(_val, GITS_TYPER_HCC)
-#define GITS_TYPER_DEVBITS_GET(_val)        MASK_GET(_val, GITS_TYPER_DEVBITS)
+#define ICC_CTLR_EL1_EOI_MODE (1ull << 1)
 
-/* ITS COMMON BASER / CBASER register */
+#define ICC_CTLR_PMHE (1ull << 6) /* priority mask hint enable */
+#define ICC_CTLR_RM   (1ull << 5) /* set if EL3 can ack or observe interrupts */
+#define ICC_CTLR_EOI_MODE_EL1_NS                                                                   \
+	(1ull << 4) /* write to EOI at EL1 secured deactivate the interrupt  */
+#define ICC_CTLR_EOI_MODE_EL1_S                                                                    \
+	(1ull << 3) /* write to EOI at EL1 secured deactivate the interrupt  */
+#define ICC_CTLR_EOI_MODE_EL3_S (1ull << 2) /* write to EOI at EL3 deactivate the interrupt  */
+#define ICC_CTLR_CBPR_EL1_NS    (1ull << 2) /* common binary point reg enable at EL1 non-secure */
+#define ICC_CTLR_CBPR_EL1_S     (1ull << 1) /* common binary point reg enable at EL1 secure */
 
-/* ITS CBASER register */
-#define GITS_CBASER_SIZE_SHIFT         0
-#define GITS_CBASER_SIZE_MASK          0xffUL
-#define GITS_CBASER_SHAREABILITY_SHIFT 10
-#define GITS_CBASER_SHAREABILITY_MASK  0x3UL
-#define GITS_CBASER_ADDR_SHIFT         12
-#define GITS_CBASER_ADDR_MASK          0xfffffffffUL
-#define GITS_CBASER_OUTER_CACHE_SHIFT  53
-#define GITS_CBASER_OUTER_CACHE_MASK   0x7UL
-#define GITS_CBASER_INNER_CACHE_SHIFT  59
-#define GITS_CBASER_INNER_CACHE_MASK   0x7UL
-#define GITS_CBASER_VALID_SHIFT        63
-#define GITS_CBASER_VALID_MASK         0x1UL
+#ifdef __cplusplus
+}
+#endif
 
-/* ITS BASER<n> register */
-#define GITS_BASER_SIZE_SHIFT         0
-#define GITS_BASER_SIZE_MASK          0xffUL
-#define GITS_BASER_PAGE_SIZE_SHIFT    8
-#define GITS_BASER_PAGE_SIZE_MASK     0x3UL
-#define GITS_BASER_PAGE_SIZE_4K       0
-#define GITS_BASER_PAGE_SIZE_16K      1
-#define GITS_BASER_PAGE_SIZE_64K      2
-#define GITS_BASER_SHAREABILITY_SHIFT 10
-#define GITS_BASER_SHAREABILITY_MASK  0x3UL
-#define GITS_BASER_ADDR_SHIFT         12
-#define GITS_BASER_ADDR_MASK          0xfffffffff
-#define GITS_BASER_ENTRY_SIZE_SHIFT   48
-#define GITS_BASER_ENTRY_SIZE_MASK    0x1fUL
-#define GITS_BASER_OUTER_CACHE_SHIFT  53
-#define GITS_BASER_OUTER_CACHE_MASK   0x7UL
-#define GITS_BASER_TYPE_SHIFT         56
-#define GITS_BASER_TYPE_MASK          0x7UL
-#define GITS_BASER_INNER_CACHE_SHIFT  59
-#define GITS_BASER_INNER_CACHE_MASK   0x7UL
-#define GITS_BASER_INDIRECT_SHIFT     62
-#define GITS_BASER_INDIRECT_MASK      0x1UL
-#define GITS_BASER_VALID_SHIFT        63
-#define GITS_BASER_VALID_MASK         0x1UL
+#endif // __GIC_V3__H
 
-#define GITS_BASER_TYPE_NONE       0
-#define GITS_BASER_TYPE_DEVICE     1
-#define GITS_BASER_TYPE_COLLECTION 4
-
-#define GITS_BASER_TYPE_GET(_val)       MASK_GET(_val, GITS_BASER_TYPE)
-#define GITS_BASER_PAGE_SIZE_GET(_val)  MASK_GET(_val, GITS_BASER_PAGE_SIZE)
-#define GITS_BASER_ENTRY_SIZE_GET(_val) MASK_GET(_val, GITS_BASER_ENTRY_SIZE)
-#define GITS_BASER_INDIRECT_GET(_val)   MASK_GET(_val, GITS_BASER_INDIRECT)
-
-#define GITS_BASER_NR_REGS 8
-
-/* ITS Commands */
-
-#define GITS_CMD_ID_MOVI    (0x01)
-#define GITS_CMD_ID_INT     (0x03)
-#define GITS_CMD_ID_CLEAR   (0x04)
-#define GITS_CMD_ID_SYNC    (0x05)
-#define GITS_CMD_ID_MAPD    (0x08)
-#define GITS_CMD_ID_MAPC    (0x09)
-#define GITS_CMD_ID_MAPTI   (0x0a)
-#define GITS_CMD_ID_MAPI    (0x0b)
-#define GITS_CMD_ID_INV     (0x0c)
-#define GITS_CMD_ID_INVALL  (0x0d)
-#define GITS_CMD_ID_MOVALL  (0x0e)
-#define GITS_CMD_ID_DISCARD (0x0f)
-
-#define GITS_CMD_ID_OFFSET (0)
-#define GITS_CMD_ID_SHIFT  (0)
-#define GITS_CMD_ID_MASK   (0xffUL)
-
-#define GITS_CMD_DEVICEID_OFFSET (0)
-#define GITS_CMD_DEVICEID_SHIFT  (32)
-#define GITS_CMD_DEVICEID_MASK   (0xffffffffUL)
-
-#define GITS_CMD_SIZE_OFFSET (1)
-#define GITS_CMD_SIZE_SHIFT  (0)
-#define GITS_CMD_SIZE_MASK   (0x1fUL)
-
-#define GITS_CMD_EVENTID_OFFSET (1)
-#define GITS_CMD_EVENTID_SHIFT  (0)
-#define GITS_CMD_EVENTID_MASK   (0xffffffffUL)
-
-#define GITS_CMD_PINTID_OFFSET (1)
-#define GITS_CMD_PINTID_SHIFT  (32)
-#define GITS_CMD_PINTID_MASK   (0xffffffffUL)
-
-#define GITS_CMD_ICID_OFFSET (2)
-#define GITS_CMD_ICID_SHIFT  (0)
-#define GITS_CMD_ICID_MASK   (0xffffUL)
-
-#define GITS_CMD_ITTADDR_OFFSET   (2)
-#define GITS_CMD_ITTADDR_SHIFT    (8)
-#define GITS_CMD_ITTADDR_MASK     (0xffffffffffUL)
-#define GITS_CMD_ITTADDR_ALIGN    (GITS_CMD_ITTADDR_SHIFT)
-#define GITS_CMD_ITTADDR_ALIGN_SZ (BIT(0) << GITS_CMD_ITTADDR_ALIGN)
-
-#define GITS_CMD_RDBASE_OFFSET (2)
-#define GITS_CMD_RDBASE_SHIFT  (16)
-#define GITS_CMD_RDBASE_MASK   (0xffffffffUL)
-#define GITS_CMD_RDBASE_ALIGN  (GITS_CMD_RDBASE_SHIFT)
-
-#define GITS_CMD_VALID_OFFSET (2)
-#define GITS_CMD_VALID_SHIFT  (63)
-#define GITS_CMD_VALID_MASK   (0x1UL)
-
-#define MASK(__basename)            (__basename##_MASK << __basename##_SHIFT)
-#define MASK_SET(__val, __basename) (((__val) & __basename##_MASK) << __basename##_SHIFT)
-#define MASK_GET(__reg, __basename) (((__reg) >> __basename##_SHIFT) & __basename##_MASK)

@@ -72,7 +72,7 @@ const irq_handler_t __gic_irq_vec_tbl[] __attribute__((section(".gic_vec_tbl")))
 	el1_cntp_irq_handler,
 	0,
 	// shared peripheral interrupt ids
-  0,
+	0,
 	int_33_irq_handler,
 	int_34_irq_handler,
 };

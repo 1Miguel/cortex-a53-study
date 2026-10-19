@@ -5,7 +5,7 @@
  *******************************************************************************/
 
 #include "gic.h"
-#include "gic_v3.h"
+#include "gic_v3_priv.h"
 #include "arm.h"
 #include "mmio.h"
 #include "assert.h"
@@ -83,10 +83,9 @@ static inline uint32_t gicv3_mpidr_affinity(uint64_t mpidr)
 
 static inline void set_irouter_curr_affinity(unsigned int int_id)
 {
-  uint64_t mpidr = sys_reg_bit_get(MPIDR_EL1, 0xff00ffffff);
+	uint64_t mpidr = sys_reg_bit_get(MPIDR_EL1, 0xff00ffffff);
 
-  mmio_write_u64(GICD_IROUTERn(gicv3_dist, int_id),
-                  mpidr);
+	mmio_write_u64(GICD_IROUTERn(gicv3_dist, int_id), mpidr);
 }
 
 static inline void wait_rwp(uint32_t int_id)
@@ -119,9 +118,8 @@ static void gic_dist_init(void)
 	}
 
 	// disable gic distributor
-	mmio_bit_clr_u32(GICD_CTLR(gicv3_dist), GICD_CTLR_ENABLE_G0 |
-								    GICD_CTLR_ENABLE_G1NS |
-								    GICD_CTLR_ENABLE_G1S);
+	mmio_bit_clr_u32(GICD_CTLR(gicv3_dist),
+			 GICD_CTLR_ENABLE_G0 | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G1S);
 	wait_rwp(GIC_SPI_INT_ID_START);
 
 	num_int_line = mmio_bit_get_u32(GICD_TYPER(gicv3_dist), GICD_TYPER_ITLINESNUMBER_BIT_MSK);
@@ -148,8 +146,9 @@ static void gic_dist_init(void)
 	//
 	// The ARE_NS shares the bit position of ARE_S, and we only want
 	// to enable G1NS for the distributor
-	mmio_bit_set_u32(GICD_CTLR(gicv3_dist), GICD_CTRL_ARE_S
-                  | GICD_CTRL_ARE_NS | GICD_CTLR_NS_ENABLE_G1 | GICD_CTLR_NS_ENABLE_G1A);
+	mmio_bit_set_u32(GICD_CTLR(gicv3_dist), GICD_CTRL_ARE_S | GICD_CTRL_ARE_NS |
+							GICD_CTLR_NS_ENABLE_G1 |
+							GICD_CTLR_NS_ENABLE_G1A);
 	wait_rwp(GIC_SPI_INT_ID_START);
 }
 
@@ -214,22 +213,20 @@ void gic_v3_init(void)
 
 void gic_v3_int_enable(unsigned int int_id)
 {
-  set_irouter_curr_affinity(int_id);
+	set_irouter_curr_affinity(int_id);
 
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ISENABLERn(gicv3_dist, int_id >> 5u),
-                   (1U << (int_id % 32)));
+		mmio_bit_set_u32(GICD_ISENABLERn(gicv3_dist, int_id >> 5u), (1U << (int_id % 32)));
 	} else {
 		mmio_bit_set_u32(GICR_ISENABLER0(gicr_rdist_base_addr()), (1U << int_id));
 	}
-  wait_rwp(int_id);
+	wait_rwp(int_id);
 }
 
 void gic_v3_int_disable(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ICENABLERn(gicv3_dist, int_id >> 5u),
-                   (1U << (int_id % 32u)));
+		mmio_bit_set_u32(GICD_ICENABLERn(gicv3_dist, int_id >> 5u), (1U << (int_id % 32u)));
 	} else {
 		mmio_bit_set_u32(GICR_ICENABLER0(gicr_rdist_base_addr()), (1U << int_id));
 	}
@@ -258,8 +255,7 @@ bool gic_v3_int_is_pending(unsigned int int_id)
 void gic_v3_int_set_pending(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ISPENDRn(gicv3_dist, (int_id >> 5)),
-				 (1u << (int_id % 32)));
+		mmio_bit_set_u32(GICD_ISPENDRn(gicv3_dist, (int_id >> 5)), (1u << (int_id % 32)));
 	} else {
 		uintptr_t base = gicr_rdist_base_addr();
 		mmio_bit_set_u32(GICR_ISPENDR0(gicr_rdist_base_addr()), (1u << int_id));
@@ -269,8 +265,7 @@ void gic_v3_int_set_pending(unsigned int int_id)
 void gic_v3_int_clear_pending(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ICPENDRn(gicv3_dist, (int_id >> 5)),
-				 (1u << (int_id % 32)));
+		mmio_bit_set_u32(GICD_ICPENDRn(gicv3_dist, (int_id >> 5)), (1u << (int_id % 32)));
 	} else {
 		uintptr_t base = gicr_rdist_base_addr();
 		mmio_bit_set_u32(GICR_ICPENDR0(base), (1u << int_id));
