@@ -32,9 +32,9 @@ void uart_cb(struct uart_pl011 *uart, void *cb_data)
   uint8_t *b;
 
   while (uart_pl011_rx_fifo_ready(uart)) {
-
     n = uart_pl011_rx_fifo(uart, rx_buf, 32);
-    __ASSERT(!n || (n < 0));
+    if (!n)
+      break;
 
     b = rx_buf;
     while (n--) 

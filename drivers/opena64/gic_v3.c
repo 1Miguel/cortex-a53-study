@@ -126,15 +126,18 @@ static void gic_dist_init(void)
 
 	num_int_line = mmio_bit_get_u32(GICD_TYPER(gicv3_dist), GICD_TYPER_ITLINESNUMBER_BIT_MSK);
 	for (int i = 1; i < (num_int_line + 1); i++) {
-		mmio_write_u32(GICD_ICENABLERn(gicv3_dist, i), 0);
-		mmio_write_u32(GICD_ICPENDRn(gicv3_dist, i), 0);
+		mmio_write_u32(GICD_ICENABLERn(gicv3_dist, i), 0xFFFFFFFF);
+		mmio_write_u32(GICD_ICPENDRn(gicv3_dist, i), 0xFFFFFFFF);
+		mmio_write_u32(GICD_ICACTIVERn(gicv3_dist, i), 0xFFFFFFFF);
 		mmio_write_u32(GICD_IGROUPRn(gicv3_dist, i), IGROUPR_VAL);
 		mmio_write_u32(GICD_IGROUPMODRn(gicv3_dist, i), IGROUPMOD_VAL);
 	}
+
 	wait_rwp(GIC_SPI_INT_ID_START);
 
 	for (int i = 2; i < (2 * (num_int_line + 1)); i++) {
 		mmio_write_u32(GICD_ICFGRn(gicv3_dist, i), 0);
+		mmio_write_u32(GICD_NSACRn(gicv3_dist, i), 0xAAAAAAAA);
 	}
 
 	// enable group0 (non-secure state)
@@ -198,14 +201,15 @@ void gic_cpuif_init(void)
 
 	// enable group0 interrupts
 	sys_reg_bit_set(ICC_IGRPEN1_EL1, 1);
+	sys_reg_bit_set(ICC_IGRPEN0_EL1, 1);
 	isb();
 }
 
 void gic_v3_init(void)
 {
-	gic_dist_init();
 	gic_cpuif_init();
 	gic_rdist_enable();
+	gic_dist_init();
 }
 
 void gic_v3_int_enable(unsigned int int_id)

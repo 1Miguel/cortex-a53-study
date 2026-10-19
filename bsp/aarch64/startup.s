@@ -182,6 +182,7 @@ _el3_init:
   // HCR controls the EL1 execution
   mrs x0, hcr_el2
   orr x0, x0, #(1 << 31)
+
   // Do not route physical IRQ exceptions from EL1 to EL2
 	bic x0, x0, #(1 << 4)
   msr hcr_el2, x0
