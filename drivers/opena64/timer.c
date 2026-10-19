@@ -20,7 +20,7 @@ static inline void irq_disable(void)
 	sys_reg_bit_set(CNTP_CTL_EL0, 2u);
 }
 
-void timer_set_irq_cb(arm_gen_timer_irq_cb_t irq_cb, void *cb_data)
+void timer_set_irq_cb(timer_irq_cb_t irq_cb, void *cb_data)
 {
 	m_irq_cb = irq_cb;
 	m_cb_data = cb_data;
@@ -47,17 +47,17 @@ void timer_poll(void)
 void timer_set_relative(uint32_t tick)
 {
 	sys_reg_write(CNTP_TVAL_EL0, (uint64_t)tick);
-  if (m_irq_cb) {
-	  irq_enable();
-  }
+	if (m_irq_cb) {
+		irq_enable();
+	}
 }
 
 void timer_set_absolute(uint64_t tick)
 {
 	sys_reg_write(CNTP_CVAL_EL0, tick);
-  if (m_irq_cb) {
-	  irq_enable();
-  }
+	if (m_irq_cb) {
+		irq_enable();
+	}
 }
 
 uint64_t timer_ms_to_cnt(uint32_t ms)
@@ -82,7 +82,7 @@ uint32_t timer_cnt_to_us(uint64_t cnt)
 
 void el1_cntp_irq_handler(void)
 {
-  irq_disable();
+	irq_disable();
 	if (m_irq_cb) {
 		m_irq_cb(m_cb_data);
 	}

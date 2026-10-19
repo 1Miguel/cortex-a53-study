@@ -21,7 +21,7 @@ typedef void (*gic_irq_handler_t)(void);
 
 /* default priority mask */
 #ifndef GIC_IDLE_PRIO
-#define GIC_IDLE_PRIO (7U)
+#define GIC_IDLE_PRIO (0xFFU)
 #endif // GIC_IDLE_PRIO
 
 #ifndef GICR_NUM_CORE
@@ -81,6 +81,14 @@ static inline uint32_t gicv3_mpidr_affinity(uint64_t mpidr)
 	return (aff3 << 24) | (aff2 << 16) | (aff1 << 8) | aff0;
 }
 
+static inline void set_irouter_curr_affinity(unsigned int int_id)
+{
+  uint64_t mpidr = sys_reg_bit_get(MPIDR_EL1, 0xff00ffffff);
+
+  mmio_write_u64(GICD_IROUTERn(gicv3_dist, int_id),
+                  mpidr);
+}
+
 static inline void wait_rwp(uint32_t int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
@@ -111,8 +119,10 @@ static void gic_dist_init(void)
 	}
 
 	// disable gic distributor
-	mmio_write_u32(GICD_CTLR(gicv3_dist), 0);
-	wait_rwp(0);
+	mmio_bit_clr_u32(GICD_CTLR(gicv3_dist), GICD_CTLR_ENABLE_G0 |
+								    GICD_CTLR_ENABLE_G1NS |
+								    GICD_CTLR_ENABLE_G1S);
+	wait_rwp(GIC_SPI_INT_ID_START);
 
 	num_int_line = mmio_bit_get_u32(GICD_TYPER(gicv3_dist), GICD_TYPER_ITLINESNUMBER_BIT_MSK);
 	for (int i = 1; i < (num_int_line + 1); i++) {
@@ -121,9 +131,9 @@ static void gic_dist_init(void)
 		mmio_write_u32(GICD_IGROUPRn(gicv3_dist, i), IGROUPR_VAL);
 		mmio_write_u32(GICD_IGROUPMODRn(gicv3_dist, i), IGROUPMOD_VAL);
 	}
+	wait_rwp(GIC_SPI_INT_ID_START);
 
 	for (int i = 2; i < (2 * (num_int_line + 1)); i++) {
-		// set to trigger sensitive by default
 		mmio_write_u32(GICD_ICFGRn(gicv3_dist, i), 0);
 	}
 
@@ -135,8 +145,9 @@ static void gic_dist_init(void)
 	//
 	// The ARE_NS shares the bit position of ARE_S, and we only want
 	// to enable G1NS for the distributor
-	mmio_bit_set_u32(GICD_CTLR(gicv3_dist), GICD_CTRL_ARE_S | GICD_CTLR_ENABLE_G1A);
-	wait_rwp(0);
+	mmio_bit_set_u32(GICD_CTLR(gicv3_dist), GICD_CTRL_ARE_S
+                  | GICD_CTRL_ARE_NS | GICD_CTLR_NS_ENABLE_G1 | GICD_CTLR_NS_ENABLE_G1A);
+	wait_rwp(GIC_SPI_INT_ID_START);
 }
 
 /**
@@ -182,7 +193,8 @@ void gic_cpuif_init(void)
 		__ASSERT(sys_reg_bit_get(ICC_SRE_EL1, ICC_SRE_SRE_ENABLE));
 	}
 
-	sys_reg_bit_set(ICC_PMR_EL1, GIC_IDLE_PRIO);
+	sys_reg_write(ICC_PMR_EL1, GIC_IDLE_PRIO);
+	isb();
 
 	// enable group0 interrupts
 	sys_reg_bit_set(ICC_IGRPEN1_EL1, 1);
@@ -198,18 +210,22 @@ void gic_v3_init(void)
 
 void gic_v3_int_enable(unsigned int int_id)
 {
+  set_irouter_curr_affinity(int_id);
+
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ISENABLERn(GICD_BASE_ADDRESS, int_id >> 5u), (1U << int_id));
+		mmio_bit_set_u32(GICD_ISENABLERn(gicv3_dist, int_id >> 5u),
+                   (1U << (int_id % 32)));
 	} else {
-		uintptr_t base = gicr_rdist_base_addr();
-		mmio_bit_set_u32(GICR_ISENABLER0(GICD_BASE_ADDRESS), (1U << int_id));
+		mmio_bit_set_u32(GICR_ISENABLER0(gicr_rdist_base_addr()), (1U << int_id));
 	}
+  wait_rwp(int_id);
 }
 
 void gic_v3_int_disable(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ICENABLERn(GICD_BASE_ADDRESS, int_id >> 5u), (1U << int_id));
+		mmio_bit_set_u32(GICD_ICENABLERn(gicv3_dist, int_id >> 5u),
+                   (1U << (int_id % 32u)));
 	} else {
 		mmio_bit_set_u32(GICR_ICENABLER0(gicr_rdist_base_addr()), (1U << int_id));
 	}
@@ -218,8 +234,8 @@ void gic_v3_int_disable(unsigned int int_id)
 bool gic_v3_int_is_enable(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		return mmio_bit_get_u32(GICD_ISPENDRn(GICD_BASE_ADDRESS, int_id >> 5u),
-					(1U << int_id));
+		return mmio_bit_get_u32(GICD_ISPENDRn(gicv3_dist, int_id >> 5u),
+					(1U << (int_id % 32u)));
 	} else {
 		return mmio_bit_get_u32(GICR_ISPENDR0(gicr_rdist_base_addr()), (1U << int_id));
 	}
@@ -228,8 +244,8 @@ bool gic_v3_int_is_enable(unsigned int int_id)
 bool gic_v3_int_is_pending(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		return mmio_bit_get_u32(GICD_ISPENDRn(GICD_BASE_ADDRESS, int_id >> 5u),
-					(1U << int_id));
+		return mmio_bit_get_u32(GICD_ISPENDRn(gicv3_dist, int_id >> 5u),
+					(1U << (int_id % 32u)));
 	} else {
 		return mmio_bit_get_u32(GICR_ISPENDR0(gicr_rdist_base_addr()), (1U << int_id));
 	}
@@ -238,7 +254,7 @@ bool gic_v3_int_is_pending(unsigned int int_id)
 void gic_v3_int_set_pending(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ISPENDRn(GICD_BASE_ADDRESS, (int_id >> 5)),
+		mmio_bit_set_u32(GICD_ISPENDRn(gicv3_dist, (int_id >> 5)),
 				 (1u << (int_id % 32)));
 	} else {
 		uintptr_t base = gicr_rdist_base_addr();
@@ -249,7 +265,7 @@ void gic_v3_int_set_pending(unsigned int int_id)
 void gic_v3_int_clear_pending(unsigned int int_id)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_bit_set_u32(GICD_ICPENDRn(GICD_BASE_ADDRESS, (int_id >> 5)),
+		mmio_bit_set_u32(GICD_ICPENDRn(gicv3_dist, (int_id >> 5)),
 				 (1u << (int_id % 32)));
 	} else {
 		uintptr_t base = gicr_rdist_base_addr();
@@ -260,7 +276,7 @@ void gic_v3_int_clear_pending(unsigned int int_id)
 void gic_v3_int_set_priority(unsigned int int_id, uint8_t prio)
 {
 	if (GIC_IS_SPI(int_id)) {
-		mmio_write_u8(GICD_IPRIORITYRn(GICD_BASE_ADDRESS, int_id), prio);
+		mmio_write_u8(GICD_IPRIORITYRn(gicv3_dist, int_id), prio);
 	} else {
 		mmio_write_u8(GICR_IPRIORITYRn(gicr_rdist_base_addr(), int_id), prio);
 	}

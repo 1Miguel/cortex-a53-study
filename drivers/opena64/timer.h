@@ -36,7 +36,7 @@ typedef void (*timer_irq_cb_t)(void *cb_data);
  * @param[in] cb_data pointer to callback data to pass to function.
  *
  */
-void timer_irq_enable(timer_irq_cb_t irq_cb, void *cb_data);
+void timer_set_irq_cb(timer_irq_cb_t irq_cb, void *cb_data);
 
 /**
  * @brief blocking poll until timeout.

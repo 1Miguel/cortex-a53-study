@@ -24,7 +24,7 @@ extern "C" {
 #endif // GIC_IRQ_ID_NUM_PPI
 
 #ifndef GICR_SGI_BASE
-/** @brief Redistributor SGI frame base address 
+/** @brief Redistributor SGI frame base address
  *
  * NOTE that redistributor defines two 64KiB(0x10000) frames one for the
  * RD_BASE and the other for SGI_BASE
@@ -44,9 +44,9 @@ extern "C" {
 #define GIC_SPI_INT_ID_START (32)
 
 #ifndef GIC_V3_1
-#define GIC_IS_SPI(n) ((n >= 32u) || (n <= 1019u))
+#define GIC_IS_SPI(n) ((n >= 32u) && (n <= 1019u))
 #else
-#define GIC_IS_SPI(n) ((n >= 32u) || (n <= 1019u)) || ((n >= 4096u) || (n <= 5119u))
+#define GIC_IS_SPI(n) ((n >= 32u) && (n <= 1019u)) || ((n >= 4096u) && (n <= 5119u))
 #endif // GIC_V3_1
 
 #define GIC_IS_LPI(n) (n >= 8192u)
@@ -68,6 +68,7 @@ extern "C" {
 #define GICD_ICFGRn(base, n)      (base + 0x0c00 + (n * 4))
 #define GICD_IGROUPMODRn(base, n) (base + 0x0d00 + (n * 4))
 #define GICD_NSACRn(base, n)      (base + 0x0e00 + (n * 4))
+#define GICD_IROUTERn(base, n)    (base + 0x6000 + (n * 8))
 
 /* Address access from GIC Redistributor base address */
 #define GICR_CTLR(base)           (base + 0x0000)
@@ -89,7 +90,7 @@ extern "C" {
 #define GICR_NSACR(base, n)       (base + GICR_SGI_BASE + 0x0e00)
 
 /* GICR Register bit defintions */
-#define GICR_WAKER_CA_BIT_MSK (1u << 1) /* children asleep */
+#define GICR_WAKER_CA_BIT_MSK (1u << 2) /* children asleep */
 #define GICR_WAKER_PS_BIT_MSK (1u << 1) /* processor sleep */
 
 /* GICR_CTLR Register bit definitions */
@@ -106,7 +107,9 @@ extern "C" {
 #define GICD_CTLR_RWP         (1u << 31) /* GICD_CTLR Register write progress bit */
 
 /* GICD_CTLR Non-secure view */
-#define GICD_CTLR_ENABLE_G1A (1u << 1)
+#define GICD_CTLR_NS_ENABLE_G1  (1u << 0)
+#define GICD_CTLR_NS_ENABLE_G1A (1u << 1)
+#define GICD_CTRL_NS_ARE_NS     (1u << 4)
 
 /* GICD_TYPER bit fields */
 #define GICD_TYPER_ITLINESNUMBER_BIT_MSK (0x1F)

@@ -4,6 +4,7 @@
 #include "opena64/arm64.h"
 #include "opena64/timer.h"
 #include "opena64/uart_pl011.h"
+#include "opena64/assert.h"
 
 /**
  * Refer to PrimeCell UART (PL011) r1p5 Technical Reference Manual
@@ -24,33 +25,49 @@ int _write(int file, char *ptr, int len)
 	return i;
 }
 
+void uart_cb(struct uart_pl011 *uart, void *cb_data)
+{
+  int n;
+  uint8_t *rx_buf = cb_data;
+  uint8_t *b;
+
+  while (uart_pl011_rx_fifo_ready(uart)) {
+
+    n = uart_pl011_rx_fifo(uart, rx_buf, 32);
+    __ASSERT(!n || (n < 0));
+
+    b = rx_buf;
+    while (n--) 
+      uart_pl011_poll_out(uart, *b++);
+  }
+}
+
 void timer_cb(void *cb_data)
 {
 	printf("timer irq!\n");
-  uint64_t *period_cnt = cb_data;
-  timer_set_relative((uint32_t)*period_cnt);
+	uint64_t *period_cnt = cb_data;
+	//timer_set_relative((uint32_t)*period_cnt);
 }
 
 int main(void)
 {
-	gic_v3_init();
-
-  // timer interrupts
+	// timer interrupts
 	gic_v3_int_set_priority(30, 0);
 	gic_v3_int_enable(30);
 
-  // uart interrupts
+	// uart interrupts
 	gic_v3_int_set_priority(33, 0);
 	gic_v3_int_enable(33);
 
-	uint64_t period_cnt = timer_ms_to_cnt(1000);
-	timer_set_irq_cb(timer_cb, &period_cnt);
-
+  uint8_t rx_buf[32];
 	struct uart_pl011_cfg uart_cfg = UART_PL011_DEFAULT_CFG;
 	uart_pl011_init(&uart_dev, &uart_cfg);
+  uart_pl011_set_irq_cb(&uart_dev, uart_cb, rx_buf);
 	uart_pl011_enable(&uart_dev);
+  uart_pl011_rx_irq_enable(&uart_dev);
 
-  timer_irq_enable();
+	uint64_t period_cnt = timer_ms_to_cnt(1000);
+	timer_set_irq_cb(timer_cb, &period_cnt);
 	timer_start();
 
 	printf("hi! this is cpu: %d at %d lvl\n", curr_cpu_id(), curr_exc_lvl());
@@ -58,8 +75,15 @@ int main(void)
 	printf("end\n");
 
 	timer_set_relative((uint32_t)period_cnt);
+
 	while (1) {
+    //uart_pl011_poll_out(&uart_dev, uart_pl011_poll_in(&uart_dev));
 	}
 
 	return 0;
+}
+
+void int_33_irq_handler(void)
+{
+  uart_pl011_irq_handler(&uart_dev);
 }

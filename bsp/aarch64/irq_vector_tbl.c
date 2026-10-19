@@ -24,13 +24,13 @@ __attribute__((weak)) void el1_cntv_irq_handler(void)
 		;
 }
 
-__attribute__((weak)) void uart_pl011_irq_handler(void)
+__attribute__((weak)) void int_33_irq_handler(void)
 {
 	while (1)
 		;
 }
 
-__attribute__((weak)) void rtc_pl031_irq_handler(void)
+__attribute__((weak)) void int_34_irq_handler(void)
 {
 	while (1)
 		;
@@ -72,6 +72,7 @@ const irq_handler_t __gic_irq_vec_tbl[] __attribute__((section(".gic_vec_tbl")))
 	el1_cntp_irq_handler,
 	0,
 	// shared peripheral interrupt ids
-	uart_pl011_irq_handler,
-	rtc_pl031_irq_handler,
+  0,
+	int_33_irq_handler,
+	int_34_irq_handler,
 };

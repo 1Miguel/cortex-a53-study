@@ -32,9 +32,38 @@ define info_cntp
   info registers CNTFRQ_EL0 CNTP_CTL_EL0 CNTP_TVAL_EL0 CNTP_CVAL_EL0
 end
 
+define gic_spi
+    set $irq_id = $arg0
+    if $irq_id < 32 || $irq_id > 1019
+        printf "GICD SPI ID must be in the range 32..1019 (got %u)\n", $irq_id
+    else
+        set $irq_word = $irq_id / 32
+        set $irq_bit = 1 << ($irq_id % 32)
+        printf "GICD configuration for SPI %u (bit mask 0x%x)\n", $irq_id, $irq_bit
+        printf "GICD_CTLR:\n"
+        x/wx 0x08000000
+        printf "IGROUPR[%u]:\n", $irq_word
+        x/wx (0x08000080 + 4 * $irq_word)
+        printf "IGROUPMODR[%u]:\n", $irq_word
+        x/wx (0x08000d00 + 4 * $irq_word)
+        printf "ISENABLER[%u]:\n", $irq_word
+        x/wx (0x08000100 + 4 * $irq_word)
+        printf "ISPENDR[%u]:\n", $irq_word
+        x/wx (0x08000200 + 4 * $irq_word)
+        printf "ICFGR[%u]:\n", $irq_id / 16
+        x/wx (0x08000c00 + 4 * ($irq_id / 16))
+        printf "IPRIORITYR[%u]:\n", $irq_id
+        x/bx (0x08000400 + $irq_id)
+        printf "IROUTER[%u]:\n", $irq_id
+        x/gx (0x08006000 + 8 * $irq_id)
+    end
+end
+
 delete
 
 machine_reset
 
+b gic_v3.c:122
+b int_33_irq_handler
 b _reset
 b main

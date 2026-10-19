@@ -151,8 +151,11 @@ _init_cpu0:
   // disable secure state GICD.DS
   ldr x0, =__gicd_base
   ldr w1, [x0]
-  orr w1, w1, #(1U << 6)
+  orr w1, w1, #(1U << 6) // disable secure state GICD_CTLR.DS 
+  orr w1, w1, #(1U << 5) // enable GICD_CTLR.ARE_NS
+  orr w1, w1, #(1U << 4) // enable GICD_CTLR.ARE_S
   str w1, [x0]
+  
 
   /* disable timer and masked (disable) interrupt */
   mov x0, 0x02
@@ -168,6 +171,8 @@ _el3_init:
 	orr x0, x0, #(1 << 10)
   // non secure state
 	orr x0, x0, #(1 << 0)
+  // route IRQ exceptions to EL1, not EL3
+	bic x0, x0, #(1 << 1)
   // we will disable SCR.HCE bit which disable hypervisor (EL2)
   // and x0, x0, #(~(0x01 << 8))
   // write x0 to scr
@@ -177,6 +182,8 @@ _el3_init:
   // HCR controls the EL1 execution
   mrs x0, hcr_el2
   orr x0, x0, #(1 << 31)
+  // Do not route physical IRQ exceptions from EL1 to EL2
+	bic x0, x0, #(1 << 4)
   msr hcr_el2, x0
   isb
 
@@ -255,8 +262,11 @@ _bss_loop:
 _bss_end:
   // call the libc initialization routines
   // bl __libc_init_array
+  // Initialise the GIC before allowing interrupts to reach the CPU.
+  bl gic_v3_init
+
   // enable irqs before jumping to main
-  msr daifclr, #2
+  msr daifclr, #3
   // jump to main
   bl main
   b .

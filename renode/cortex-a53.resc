@@ -18,3 +18,4 @@ macro reset
 runMacro $reset
 
 machine StartGdbServer 3333
+logLevel -1 sysbus.gic

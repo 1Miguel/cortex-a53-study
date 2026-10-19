@@ -21,7 +21,7 @@ add_executable(firmware
     src/main.c
     bsp/common/syscalls.c
     drivers/opena64/uart_pl011.c
-    drivers/opena64/arm_gen_timer.c
+    drivers/opena64/timer.c
     drivers/opena64/gic_v3.c
     $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:bsp/aarch64/el_exceptions.c>
     $<$<STREQUAL:"${TARGET_ARCH}","aarch64">:bsp/aarch64/startup.s>
